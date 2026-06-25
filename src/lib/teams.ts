@@ -45,23 +45,6 @@ const teamToCode: Record<string, string> = {
   Canada: "ca",
 };
 
-const knownCodes = new Set(Object.values(teamToCode));
-
-export function getTeamFlagUrl(name: string): string | null {
-  const code = teamToCode[name];
-  if (!code) return null;
-  return `https://flagcdn.com/w80/${code}.png`;
-}
-
-export function getTeamInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 export function teamCode(name: string): string {
   const code = teamToCode[name];
   if (code) return code;

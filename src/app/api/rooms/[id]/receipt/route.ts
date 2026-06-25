@@ -13,5 +13,9 @@ export async function GET(
   if (room.status !== "SETTLED" || !room.settlementReceipt) {
     return NextResponse.json({ error: "Room not yet settled" }, { status: 400 });
   }
-  return NextResponse.json(room.settlementReceipt);
+  return NextResponse.json({
+    ...room.settlementReceipt,
+    homeTeam: room.homeTeam,
+    awayTeam: room.awayTeam,
+  });
 }

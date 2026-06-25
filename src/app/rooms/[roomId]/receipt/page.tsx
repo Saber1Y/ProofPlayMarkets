@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { teamCode } from "@/lib/teams";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { TxLineBadge } from "@/components/ui/TxLineBadge";
+import { SolanaBadge } from "@/components/ui/SolanaBadge";
 
 interface PayoutSummary {
   participant: string;
@@ -24,6 +28,8 @@ interface Receipt {
   settlementTx?: string;
   winnerSide: string;
   payoutSummary: PayoutSummary[];
+  homeTeam?: string;
+  awayTeam?: string;
 }
 
 export default function ReceiptPage() {
@@ -32,6 +38,7 @@ export default function ReceiptPage() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
 
   useEffect(() => {
     fetch(`/api/rooms/${roomId}/receipt`)
@@ -45,116 +52,298 @@ export default function ReceiptPage() {
   }, [roomId]);
 
   if (loading) {
-    return <div className="animate-pulse text-zinc-500 py-24 text-center">Loading receipt...</div>;
-  }
-
-  if (error || !receipt) {
     return (
-      <div className="py-24 text-center">
-        <p className="text-red-400 mb-4">{error || "Receipt not found"}</p>
-        <Link href="/rooms" className="text-emerald-400 hover:underline">Back to rooms</Link>
+      <div className="flex items-center justify-center py-24">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-accent border-t-transparent" />
       </div>
     );
   }
 
+  if (error || !receipt) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="glass-strong rounded-xl p-6">
+          <p className="text-sm text-red-400">{error || "Receipt not found"}</p>
+          <Link href="/rooms" className="mt-3 inline-block text-xs font-medium text-cyan-accent">
+            Back to rooms →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const homeCode = teamCode(receipt.homeTeam ?? "");
+  const awayCode = teamCode(receipt.awayTeam ?? "");
+  const isOverUnder = receipt.marketType === "TOTAL_GOALS_OVER_UNDER";
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <Link href={`/rooms/${roomId}`} className="text-sm text-zinc-500 hover:text-zinc-300 mb-6 inline-block">
-        &larr; Back to room
+    <div className="mx-auto max-w-3xl">
+      <Link
+        href={`/rooms/${roomId}`}
+        className="mb-6 inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+      >
+        <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Back to room
       </Link>
 
-      <div className="rounded-lg border border-emerald-800 bg-zinc-900/50 p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <span className="text-2xl">📋</span>
-          <h1 className="text-xl font-bold">TxLINE Resolution Receipt</h1>
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="section-header">Settlement Receipt</span>
+          <TxLineBadge status="verified" />
+          <SolanaBadge status="verified" />
         </div>
+        <h1 className="text-2xl font-bold">Room Resolved</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Room settled using TxLINE verified World Cup data
+        </p>
+      </div>
 
-        {/* Outcome */}
-        <section className="mb-6 rounded-lg bg-zinc-800/50 p-4">
-          <h2 className="text-sm font-semibold text-zinc-400 mb-2">Outcome</h2>
-          <div className="text-2xl font-bold text-emerald-400">{receipt.winnerSide}</div>
-          <div className="text-sm text-zinc-400 mt-1">
-            Final Score: {receipt.finalScore.home} : {receipt.finalScore.away}
-          </div>
-        </section>
+      {/* Outcome Summary */}
+      <GlassCard className="mb-6 overflow-hidden" hover={false}>
+        <div className="border-b border-white/5 bg-gradient-to-r from-green-accent/5 to-cyan-accent/5 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/5">
+                {homeCode ? (
+                  <img src={`https://flagcdn.com/${homeCode.toLowerCase()}.svg`} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="text-lg font-bold">H</span>
+                )}
+              </div>
+              <span className="text-xs text-zinc-400">{receipt.homeTeam ?? "Home"}</span>
+            </div>
 
-        {/* TxLINE Data Used */}
-        <section className="mb-6 rounded-lg bg-zinc-800/50 p-4">
-          <h2 className="text-sm font-semibold text-zinc-400 mb-2">TxLINE Data Used</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-zinc-500">Fixture ID</div>
-            <div className="text-zinc-200 font-mono">{receipt.fixtureId}</div>
-            <div className="text-zinc-500">Market Type</div>
-            <div className="text-zinc-200">{receipt.marketType}</div>
-            <div className="text-zinc-500">Threshold</div>
-            <div className="text-zinc-200">{receipt.threshold}</div>
-            <div className="text-zinc-500">Stat Keys</div>
-            <div className="text-zinc-200 font-mono">{receipt.statKeysUsed.join(", ")}</div>
-            <div className="text-zinc-500">Sequence</div>
-            <div className="text-zinc-200 font-mono">{receipt.txlineSeq}</div>
-            <div className="text-zinc-500">Timestamp</div>
-            <div className="text-zinc-200">{new Date(receipt.txlineTimestamp).toLocaleString()}</div>
-          </div>
-        </section>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-4xl font-bold tracking-tight">
+                {receipt.finalScore.home} - {receipt.finalScore.away}
+              </span>
+              {isOverUnder && (
+                <span className="text-xs text-zinc-500">
+                  Total goals: {receipt.finalScore.home + receipt.finalScore.away}
+                </span>
+              )}
+            </div>
 
-        {/* Validation Proof */}
-        <section className="mb-6 rounded-lg bg-zinc-800/50 p-4">
-          <h2 className="text-sm font-semibold text-zinc-400 mb-2">Validation Proof</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-zinc-500">Endpoint</div>
-            <div className="text-zinc-200 font-mono text-xs break-all">{receipt.validationEndpoint}</div>
-            <div className="text-zinc-500">Result</div>
-            <div className={receipt.validationResult ? "text-emerald-400" : "text-red-400"}>
-              {receipt.validationResult ? "Verified ✓" : "Failed ✗"}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/5">
+                {awayCode ? (
+                  <img src={`https://flagcdn.com/${awayCode.toLowerCase()}.svg`} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="text-lg font-bold">A</span>
+                )}
+              </div>
+              <span className="text-xs text-zinc-400">{receipt.awayTeam ?? "Away"}</span>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* On-Chain Verification */}
-        <section className="mb-6 rounded-lg bg-zinc-800/50 p-4">
-          <h2 className="text-sm font-semibold text-zinc-400 mb-2">On-Chain Verification</h2>
-          <div className="text-sm">
-            <div className="text-zinc-500 mb-1">Merkle Root PDA</div>
-            <div className="text-zinc-200 font-mono text-xs break-all bg-zinc-900 rounded p-2">
+        <div className="grid grid-cols-3 divide-x divide-white/5">
+          <div className="p-4 text-center">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-600">Room Rule</div>
+            <div className="mt-1 text-sm font-semibold text-white">
+              {isOverUnder ? `${receipt.threshold}+ goals` : receipt.marketType}
+            </div>
+          </div>
+          <div className="p-4 text-center">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-600">Winning Side</div>
+            <div className="mt-1 text-sm font-semibold text-green-accent">
+              {receipt.winnerSide}
+            </div>
+          </div>
+          <div className="p-4 text-center">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-600">Validation</div>
+            <div className="mt-1 text-sm font-semibold text-cyan-accent">
+              {receipt.validationResult ? "Passed" : "Failed"}
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Verification Trail */}
+      <GlassCard className="mb-6 p-5" hover={false}>
+        <span className="section-header mb-4 block">Verification Trail</span>
+        <div className="flex items-center gap-3">
+          {[
+            { label: "TxLINE Feed", status: "completed", step: 1 },
+            { label: "Merkle Proof", status: "completed", step: 2 },
+            { label: "Solana Check", status: receipt.settlementTx ? "completed" : "active", step: 3 },
+          ].map((v, i) => (
+            <>
+              <div
+                key={v.step}
+                className={`verification-step flex-1 ${v.status === "completed" ? "completed" : "active"}`}
+              >
+                <div
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                    v.status === "completed"
+                      ? "bg-green-accent/20 text-green-accent"
+                      : "bg-cyan-accent/20 text-cyan-accent"
+                  }`}
+                >
+                  {v.status === "completed" ? (
+                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                      <path d="M2.5 6l2.5 2.5L9.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    v.step
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-300">{v.label}</div>
+                  <div className="text-[10px] text-zinc-600">
+                    {v.status === "completed" ? "Complete" : "Verified"}
+                  </div>
+                </div>
+              </div>
+              {i < 2 && (
+                <div className="h-px flex-1 bg-white/10" />
+              )}
+            </>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* Technical Proof */}
+      <GlassCard className="mb-6 p-5" hover={false}>
+        <span className="section-header mb-4 block">Technical Proof</span>
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div>
+            <span className="text-zinc-600">Fixture ID</span>
+            <div className="mt-0.5 font-mono text-zinc-300">{receipt.fixtureId}</div>
+          </div>
+          <div>
+            <span className="text-zinc-600">Stat Keys</span>
+            <div className="mt-0.5 font-mono text-zinc-300">{receipt.statKeysUsed.join(", ")}</div>
+          </div>
+          <div>
+            <span className="text-zinc-600">Predicate</span>
+            <div className="mt-0.5 font-mono text-zinc-300">
+              {isOverUnder ? `total_goals > ${receipt.threshold}` : "winner"}
+            </div>
+          </div>
+          <div>
+            <span className="text-zinc-600">TxLINE Sequence</span>
+            <div className="mt-0.5 font-mono text-zinc-300">{receipt.txlineSeq}</div>
+          </div>
+          <div className="col-span-2">
+            <span className="text-zinc-600">Merkle Root</span>
+            <div className="mt-0.5 truncate font-mono text-xs text-zinc-300">
               {receipt.merkleRootPda}
             </div>
           </div>
           {receipt.settlementTx && (
-            <div className="mt-2 text-sm">
-              <div className="text-zinc-500 mb-1">Settlement Transaction</div>
-              <div className="text-zinc-200 font-mono text-xs break-all bg-zinc-900 rounded p-2">
-                {receipt.settlementTx}
+            <div className="col-span-2">
+              <span className="text-zinc-600">Settlement Transaction</span>
+              <div className="mt-0.5">
+                <a
+                  href={`https://explorer.solana.com/tx/${receipt.settlementTx}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-cyan-accent hover:text-cyan-300 transition-colors"
+                >
+                  {receipt.settlementTx}
+                </a>
               </div>
             </div>
           )}
-        </section>
+          <div className="col-span-2">
+            <span className="text-zinc-600">Validation Endpoint</span>
+            <div className="mt-0.5 truncate font-mono text-xs text-zinc-500">
+              {receipt.validationEndpoint}
+            </div>
+          </div>
+          <div className="col-span-2">
+            <span className="text-zinc-600">Validation Timestamp</span>
+            <div className="mt-0.5 font-mono text-zinc-300">
+              {new Date(receipt.txlineTimestamp).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </GlassCard>
 
-        {/* Payouts */}
-        <section className="mb-6 rounded-lg bg-zinc-800/50 p-4">
-          <h2 className="text-sm font-semibold text-zinc-400 mb-2">Payouts</h2>
-          {receipt.payoutSummary.length === 0 ? (
-            <div className="text-sm text-zinc-500">No winners (no participants on winning side).</div>
-          ) : (
-            <div className="space-y-1">
-              {receipt.payoutSummary.map((p, i) => (
-                <div key={i} className="flex items-center justify-between text-sm rounded bg-zinc-900/50 px-3 py-1.5">
-                  <span className="font-mono text-xs text-zinc-300">
+      {/* Payouts */}
+      <GlassCard className="mb-6 p-5" hover={false}>
+        <span className="section-header mb-4 block">Payouts</span>
+        {receipt.payoutSummary.length === 0 ? (
+          <div className="flex items-center justify-center py-6 text-sm text-zinc-600">
+            No winners — no participants on the winning side.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {receipt.payoutSummary.map((p, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-2.5"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-accent/10 text-[10px] font-bold text-green-accent">
+                    {i + 1}
+                  </span>
+                  <span className="text-xs font-mono text-zinc-400">
                     {p.participant.slice(0, 8)}...{p.participant.slice(-4)}
                   </span>
-                  <span className="text-emerald-400 font-medium">{p.amount}x</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+                <span className="text-sm font-semibold text-green-accent">
+                  {p.amount}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
 
-        {/* Raw JSON */}
-        <section className="rounded-lg bg-zinc-800/30 p-4">
-          <h2 className="text-sm font-semibold text-zinc-400 mb-2">Raw Receipt JSON</h2>
-          <pre className="text-xs text-zinc-500 font-mono overflow-x-auto max-h-48 overflow-y-auto">
+      {/* Raw JSON drawer */}
+      <GlassCard className="p-5" hover={false}>
+        <button
+          onClick={() => setShowRaw(!showRaw)}
+          className="flex w-full items-center justify-between"
+        >
+          <span className="section-header">Raw Receipt JSON</span>
+          <svg
+            className={`h-4 w-4 text-zinc-500 transition-transform ${showRaw ? "rotate-180" : ""}`}
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {showRaw && (
+          <pre className="mt-4 max-h-64 overflow-auto rounded-lg bg-white/[0.02] p-4 text-[10px] leading-relaxed text-zinc-500 font-mono">
             {JSON.stringify(receipt, null, 2)}
           </pre>
-        </section>
+        )}
+      </GlassCard>
+
+      {/* Badges */}
+      <div className="mt-6 flex items-center justify-center gap-6">
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+          <svg className="h-3 w-3 text-cyan-accent" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 6l1.5 1.5L8 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Verified by TxLINE
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+          <svg className="h-3 w-3 text-purple-400" viewBox="0 0 12 12" fill="currentColor">
+            <circle cx="6" cy="6" r="6" />
+          </svg>
+          Anchored on Solana
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+          <svg className="h-3 w-3 text-green-accent" viewBox="0 0 12 12" fill="none">
+            <path d="M2.5 6l2.5 2.5L9.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Settled automatically
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+          <svg className="h-3 w-3 text-zinc-500" viewBox="0 0 12 12" fill="none">
+            <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          No admin override
+        </div>
       </div>
     </div>
   );

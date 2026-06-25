@@ -13,7 +13,7 @@ import {
 } from "@solana/web3.js";
 import { marketPda, participantPda } from "./types";
 
-const PROGRAM_ID = new PublicKey("BJiVyh6tNT9yQYh1HLtZksDpVjkCJhCdjDBy8v5ocUkB");
+const PROGRAM_ID = new PublicKey("D254EggCVsZ7jKtJJ29diEv3P4qqjn5APBAvcRwDNsyE");
 const IDL: Idl = require("../../target/idl/prediction_market.json");
 
 export class PredictionMarketSDK {

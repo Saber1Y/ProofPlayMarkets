@@ -7,6 +7,7 @@ import { WalletButton } from "@/components/WalletButton";
 const links = [
   { href: "/fixtures", label: "Fixtures" },
   { href: "/rooms", label: "My Rooms" },
+  { href: "/demo", label: "Demo" },
   { href: "/docs", label: "Docs" },
 ];
 

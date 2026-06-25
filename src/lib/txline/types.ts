@@ -4,15 +4,30 @@ export interface TxLINEConfig {
   apiToken: string;
 }
 
+/** Raw fixture from TxLINE API (PascalCase) */
+export interface TxLINEFixtureRaw {
+  FixtureId: number;
+  Competition: string;
+  CompetitionId: number;
+  FixtureGroupId: number;
+  Participant1: string;
+  Participant1Id: number;
+  Participant1IsHome: boolean;
+  Participant2: string;
+  Participant2Id: number;
+  StartTime: number;
+  Ts: number;
+}
+
+/** Normalized fixture used within ProofPlay */
 export interface TxLINEFixture {
   id: number;
-  competition_id: number;
-  home_team: string;
-  away_team: string;
-  start_date: string;
+  competitionId: number;
+  competition: string;
+  homeTeam: string;
+  awayTeam: string;
+  startDate: string;
   status: string;
-  competition_name?: string;
-  sport_id?: number;
 }
 
 export interface TxLINEScoreSnapshot {

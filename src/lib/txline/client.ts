@@ -1,5 +1,6 @@
 import type {
   TxLINEConfig,
+  TxLINEFixtureRaw,
   TxLINEFixture,
   TxLINEScoreSnapshot,
   TxLINEStatValidationRequest,
@@ -39,9 +40,29 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+function normalizeFixture(raw: TxLINEFixtureRaw): TxLINEFixture {
+  return {
+    id: raw.FixtureId,
+    competitionId: raw.CompetitionId,
+    competition: raw.Competition,
+    homeTeam: raw.Participant1,
+    awayTeam: raw.Participant2,
+    startDate: new Date(raw.StartTime).toISOString(),
+    status: raw.StartTime > Date.now() ? "scheduled" : "finished",
+  };
+}
+
 export async function getFixtures(competitionId?: number): Promise<TxLINEFixture[]> {
-  const params = competitionId ? `?competition_id=${competitionId}` : "";
-  return fetchJSON<TxLINEFixture[]>(`/api/fixtures/snapshot${params}`);
+  const params = new URLSearchParams();
+  if (competitionId) params.set("competitionId", String(competitionId));
+  const qs = params.toString();
+  const raw = await fetchJSON<TxLINEFixtureRaw[]>(`/api/fixtures/snapshot${qs ? `?${qs}` : ""}`);
+  return raw.map(normalizeFixture);
+}
+
+export async function getFixtureById(fixtureId: number): Promise<TxLINEFixture | null> {
+  const fixtures = await getFixtures();
+  return fixtures.find((f) => f.id === fixtureId) ?? null;
 }
 
 export async function getScoreSnapshot(fixtureId: number): Promise<TxLINEScoreSnapshot> {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRoom, listRooms } from "@/lib/rooms/store";
+import { getServerSDK } from "@/lib/solana/server";
 
 export async function GET() {
   const rooms = listRooms();
@@ -13,9 +14,19 @@ export async function POST(req: NextRequest) {
     if (!fixtureId || !homeTeam || !awayTeam || !marketType || threshold === undefined || !wallet) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-    const room = createRoom({ fixtureId, homeTeam, awayTeam, marketType, threshold, wallet });
+
+    // Initialize market on-chain via server admin keypair
+    const sdk = getServerSDK();
+    const txSig = await sdk.initializeMarket(fixtureId, marketType, threshold);
+
+    const room = createRoom({
+      fixtureId, homeTeam, awayTeam, marketType, threshold, wallet,
+      marketPda: sdk.marketPda(fixtureId)[0].toBase58(),
+      initializeTx: txSig,
+    });
     return NextResponse.json(room, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Invalid request";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

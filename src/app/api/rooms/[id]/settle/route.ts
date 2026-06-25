@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRoom, settleRoom } from "@/lib/rooms/store";
 import { ensureTxLINEInit } from "@/lib/txline/server-init";
 import { getScoreSnapshot, getStatValidation } from "@/lib/txline/client";
+import { getServerSDK } from "@/lib/solana/server";
 import type { Side, SettlementReceipt } from "@/lib/rooms/types";
 
 export async function POST(
@@ -47,7 +48,14 @@ export async function POST(
       operator: "SUM",
     });
 
-    // 4. Build settlement receipt (partial — full on-chain verification later)
+    // 4. Settle on-chain via server admin keypair
+    const sdk = getServerSDK();
+    const merkleRoot = Array.from(
+      Buffer.from(validation.merkle_root?.slice(0, 64).padEnd(64, "0") ?? "0".repeat(64), "hex")
+    );
+    const settleTx = await sdk.settleMarket(room.fixtureId, winnerSide, merkleRoot);
+
+    // 5. Build settlement receipt
     const receipt: SettlementReceipt = {
       fixtureId: room.fixtureId,
       roomId: room.id,
@@ -60,13 +68,14 @@ export async function POST(
       merkleRootPda: validation.merkle_root ?? "pending",
       validationEndpoint: "https://txline-dev.txodds.com/api/scores/stat-validation",
       validationResult: validation.result,
+      settlementTx: settleTx,
       winnerSide,
       payoutSummary: room.participants
         .filter((p) => p.side === winnerSide)
         .map((p) => ({ participant: p.wallet, amount: p.amount * 2 })),
     };
 
-    const settled = settleRoom(id, winnerSide, receipt);
+    const settled = settleRoom(id, winnerSide, receipt, settleTx);
     if (!settled) {
       return NextResponse.json({ error: "Failed to settle room" }, { status: 500 });
     }

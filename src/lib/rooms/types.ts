@@ -42,6 +42,10 @@ export interface Room {
   createdAt: string;
   winnerSide?: Side;
   settlementReceipt?: SettlementReceipt;
+  marketPda?: string;
+  initializeTx?: string;
+  lockTx?: string;
+  settleTx?: string;
 }
 
 export interface CreateRoomRequest {

@@ -16,6 +16,8 @@ export function createRoom(data: {
   marketType: string;
   threshold: number;
   wallet: string;
+  marketPda?: string;
+  initializeTx?: string;
 }): Room {
   const room: Room = {
     id: generateId(),
@@ -28,6 +30,8 @@ export function createRoom(data: {
     participants: [],
     createdBy: data.wallet,
     createdAt: new Date().toISOString(),
+    marketPda: data.marketPda,
+    initializeTx: data.initializeTx,
   };
   rooms.set(room.id, room);
   return room;
@@ -53,22 +57,25 @@ export function addParticipant(
   return room;
 }
 
-export function lockRoom(roomId: string): Room | null {
+export function lockRoom(roomId: string, txSig?: string): Room | null {
   const room = rooms.get(roomId);
   if (!room || room.status !== "OPEN") return null;
   room.status = "LOCKED";
+  if (txSig) room.lockTx = txSig;
   return room;
 }
 
 export function settleRoom(
   roomId: string,
   winnerSide: Side,
-  receipt: SettlementReceipt
+  receipt: SettlementReceipt,
+  settleTx?: string
 ): Room | null {
   const room = rooms.get(roomId);
   if (!room || room.status !== "LOCKED") return null;
   room.status = "SETTLED";
   room.winnerSide = winnerSide;
   room.settlementReceipt = receipt;
+  if (settleTx) room.settleTx = settleTx;
   return room;
 }

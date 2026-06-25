@@ -61,3 +61,7 @@ export function getTeamInitials(name: string): string {
     .slice(0, 2)
     .toUpperCase();
 }
+
+export function teamCode(name: string): string {
+  return teamToCode[name] ?? fallback(name);
+}

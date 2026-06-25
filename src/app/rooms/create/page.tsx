@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
+import { teamCode } from "@/lib/teams";
+import { GlassCard } from "@/components/ui/GlassCard";
 
 interface Fixture {
   id: number;
@@ -13,10 +15,26 @@ interface Fixture {
   competition: string;
 }
 
+const MARKET_TYPES = [
+  {
+    id: "TOTAL_GOALS_OVER_UNDER",
+    name: "Goal Rush",
+    desc: "Will the match have 3+ goals?",
+    rule: "YES wins if total goals are 3 or more. NO wins if 2 or fewer.",
+  },
+  {
+    id: "MATCH_WINNER",
+    name: "Winner Pick",
+    desc: "Who wins the match?",
+    rule: "Pick the winning team. Draw counts as a third option.",
+  },
+];
+
 function CreateRoomForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fixtureId = searchParams.get("fixtureId");
+  const template = searchParams.get("template");
   const { ready, authenticated, user, login } = usePrivy();
 
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -34,6 +52,15 @@ function CreateRoomForm() {
       .then(setFixtures)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (template === "Goal Rush") {
+      setMarketType("TOTAL_GOALS_OVER_UNDER");
+      setThreshold("2.5");
+    } else if (template === "Winner Pick") {
+      setMarketType("MATCH_WINNER");
+    }
+  }, [template]);
 
   async function handleCreate() {
     if (!selectedFixture || !wallet) return;
@@ -74,104 +101,217 @@ function CreateRoomForm() {
   }
 
   const selected = fixtures.find((f) => f.id === Number(selectedFixture));
+  const homeCode = teamCode(selected?.homeTeam ?? "");
+  const awayCode = teamCode(selected?.awayTeam ?? "");
 
   if (!ready) {
-    return <div className="animate-pulse text-zinc-500 py-24 text-center">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-accent border-t-transparent" />
+      </div>
+    );
   }
 
   if (!authenticated || !wallet) {
     return (
-      <div className="max-w-xl mx-auto py-24 text-center">
-        <h1 className="text-2xl font-bold mb-4">Connect Your Wallet</h1>
-        <p className="text-zinc-400 mb-6">You need to connect a wallet to create a room.</p>
-        <button
-          onClick={login}
-          className="rounded-lg bg-emerald-500 px-6 py-3 font-medium text-zinc-950 hover:bg-emerald-400 transition-colors"
-        >
-          Connect Wallet
-        </button>
+      <div className="mx-auto max-w-md py-24 text-center">
+        <div className="glass-strong rounded-xl p-8">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-accent/10">
+            <svg className="h-6 w-6 text-green-accent" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2l2.5 5.5L18 8.5l-4 4 1 5.5L10 15l-5 3 1-5.5-4-4 5.5-1L10 2z" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold">Connect Your Wallet</h1>
+          <p className="mt-2 text-sm text-zinc-500">
+            You need to connect a wallet to create a prediction room.
+          </p>
+          <button
+            onClick={login}
+            className="mt-6 rounded-lg bg-green-accent px-6 py-2.5 text-sm font-semibold text-pitch transition-colors hover:bg-green-accent/90"
+          >
+            Connect Wallet
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto">
-      <Link href="/fixtures" className="text-sm text-zinc-500 hover:text-zinc-300 mb-6 inline-block">
-        &larr; Back to fixtures
+    <div className="mx-auto max-w-2xl">
+      <Link
+        href="/fixtures"
+        className="mb-6 inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+      >
+        <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Back to fixtures
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">Create Prediction Room</h1>
+      <div className="mb-6">
+        <span className="section-header">Create</span>
+        <h1 className="text-2xl font-bold">Prediction Room</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Set up a room for friends. All predictions settle via TxLINE on-chain.
+        </p>
+      </div>
 
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 space-y-5">
-        {/* Fixture selector */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Fixture</label>
+      <div className="flex flex-col gap-5">
+        {/* Step 1: Match */}
+        <GlassCard className="p-5" hover={false}>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-accent/20 text-[10px] font-bold text-green-accent">
+              1
+            </span>
+            <span className="text-sm font-medium text-white">Select Match</span>
+          </div>
+
           <select
             value={selectedFixture}
             onChange={(e) => setSelectedFixture(e.target.value)}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm"
+            className="glass-input w-full px-3 py-2 text-sm"
           >
-            <option value="">Select a fixture...</option>
+            <option value="" className="bg-pitch">Choose a World Cup fixture...</option>
             {fixtures.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.homeTeam} vs {f.awayTeam} — {new Date(f.startDate).toLocaleDateString()}
+              <option key={f.id} value={f.id} className="bg-pitch">
+                {f.homeTeam} vs {f.awayTeam}
               </option>
             ))}
           </select>
-        </div>
 
-        {selected && (
-          <div className="rounded bg-zinc-800/50 px-4 py-3 text-sm text-zinc-300">
-            {selected.homeTeam} vs {selected.awayTeam} &middot;{" "}
-            {new Date(selected.startDate).toLocaleDateString("en-US", {
-              weekday: "short", month: "short", day: "numeric", hour: "2-digit",
-            })}
+          {selected && (
+            <div className="glass mt-3 flex items-center gap-3 rounded-lg px-4 py-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-xs font-bold">
+                {homeCode ? (
+                  <img src={`https://flagcdn.com/${homeCode.toLowerCase()}.svg`} alt="" className="h-5 w-5 rounded-full object-cover" />
+                ) : selected.homeTeam.charAt(0)}
+              </div>
+              <div className="flex-1 text-sm">
+                <span className="font-medium text-zinc-200">{selected.homeTeam}</span>
+                <span className="mx-2 text-zinc-600">vs</span>
+                <span className="font-medium text-zinc-200">{selected.awayTeam}</span>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-xs font-bold">
+                {awayCode ? (
+                  <img src={`https://flagcdn.com/${awayCode.toLowerCase()}.svg`} alt="" className="h-5 w-5 rounded-full object-cover" />
+                ) : selected.awayTeam.charAt(0)}
+              </div>
+            </div>
+          )}
+        </GlassCard>
+
+        {/* Step 2: Prediction Type */}
+        <GlassCard className="p-5" hover={false}>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-accent/20 text-[10px] font-bold text-green-accent">
+              2
+            </span>
+            <span className="text-sm font-medium text-white">Prediction Type</span>
           </div>
-        )}
 
-        {/* Market type */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Market Type</label>
-          <select
-            value={marketType}
-            onChange={(e) => setMarketType(e.target.value)}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm"
-          >
-            <option value="TOTAL_GOALS_OVER_UNDER">Total Goals — Over/Under</option>
-            <option value="MATCH_WINNER">Match Winner — 1X2</option>
-          </select>
-        </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {MARKET_TYPES.map((mt) => (
+              <button
+                key={mt.id}
+                onClick={() => setMarketType(mt.id)}
+                className={`rounded-xl border p-4 text-left transition-all ${
+                  marketType === mt.id
+                    ? "border-green-accent/40 bg-green-accent/5"
+                    : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                }`}
+              >
+                <h3 className="text-sm font-semibold text-white">{mt.name}</h3>
+                <p className="mt-1 text-xs text-zinc-500">{mt.desc}</p>
+                {marketType === mt.id && (
+                  <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
+                    {mt.rule}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </GlassCard>
 
-        {/* Threshold (for Over/Under) */}
-        {marketType === "TOTAL_GOALS_OVER_UNDER" && (
+        {/* Step 3: Room Rules */}
+        <GlassCard className="p-5" hover={false}>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-accent/20 text-[10px] font-bold text-green-accent">
+              3
+            </span>
+            <span className="text-sm font-medium text-white">Room Rules</span>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">Goal Threshold</label>
+            <label className="mb-1 block text-xs text-zinc-500">
+              Goal Threshold
+            </label>
             <input
               type="number"
               step="0.5"
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm"
+              className="glass-input w-full px-3 py-2 text-sm"
+              disabled={marketType !== "TOTAL_GOALS_OVER_UNDER"}
             />
           </div>
-        )}
+        </GlassCard>
 
-        {/* Wallet (read-only from Privy) */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Your Wallet</label>
-          <div className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm font-mono text-zinc-400">
-            {wallet.slice(0, 8)}...{wallet.slice(-6)}
+        {/* Step 4: Verification */}
+        <GlassCard className="p-5" hover={false}>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-accent/20 text-[10px] font-bold text-green-accent">
+              4
+            </span>
+            <span className="text-sm font-medium text-white">Verification</span>
           </div>
-        </div>
 
-        {error && <div className="text-sm text-red-400">{error}</div>}
+          <div className="glass rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-zinc-600">Data Source</span>
+                <div className="font-medium text-cyan-accent">TxLINE</div>
+              </div>
+              <div>
+                <span className="text-zinc-600">Stat Keys</span>
+                <div className="font-mono text-zinc-300">
+                  {marketType === "TOTAL_GOALS_OVER_UNDER" ? "1 + 2" : "winner"}
+                </div>
+              </div>
+              <div>
+                <span className="text-zinc-600">Rule</span>
+                <div className="font-mono text-zinc-300">
+                  {marketType === "TOTAL_GOALS_OVER_UNDER"
+                    ? `total_goals > ${threshold}`
+                    : "winner"}
+                </div>
+              </div>
+              <div>
+                <span className="text-zinc-600">Settlement</span>
+                <div className="text-zinc-300">Automatic</div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+
+        {error && (
+          <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
         <button
           onClick={handleCreate}
           disabled={creating || !selectedFixture}
-          className="w-full rounded-lg bg-emerald-500 px-4 py-2.5 font-medium text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-colors"
+          className="w-full rounded-xl bg-green-accent px-6 py-3 text-sm font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {creating ? "Creating..." : "Create Room"}
+          {creating ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
+              Creating Room...
+            </span>
+          ) : (
+            "Create Room"
+          )}
         </button>
       </div>
     </div>
@@ -180,7 +320,13 @@ function CreateRoomForm() {
 
 export default function CreateRoomPage() {
   return (
-    <Suspense fallback={<div className="animate-pulse text-zinc-500 py-24 text-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-accent border-t-transparent" />
+        </div>
+      }
+    >
       <CreateRoomForm />
     </Suspense>
   );

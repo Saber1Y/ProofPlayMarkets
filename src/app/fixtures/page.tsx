@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getTeamFlagUrl } from "@/lib/teams";
 
 interface Fixture {
   id: number;
@@ -10,6 +11,29 @@ interface Fixture {
   startDate: string;
   status: string;
   competition: string;
+}
+
+function FixtureFlag({ name, size }: { name: string; size?: number }) {
+  const src = getTeamFlagUrl(name);
+  const s = size ?? 24;
+  if (!src) {
+    return (
+      <div
+        className="rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0"
+        style={{ width: s, height: s }}
+      >
+        {name[0]}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="rounded-sm object-cover shrink-0"
+      style={{ width: s, height: s }}
+    />
+  );
 }
 
 export default function FixturesPage() {
@@ -61,10 +85,12 @@ export default function FixturesPage() {
             className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 hover:border-zinc-700 transition-colors"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="font-medium w-36 text-right">{f.homeTeam}</span>
-                <span className="text-zinc-600 text-sm">vs</span>
-                <span className="font-medium w-36">{f.awayTeam}</span>
+              <div className="flex items-center gap-3">
+                <FixtureFlag name={f.homeTeam} />
+                <span className="font-medium text-right min-w-[6rem]">{f.homeTeam}</span>
+                <span className="text-zinc-600 text-xs">vs</span>
+                <span className="font-medium min-w-[6rem]">{f.awayTeam}</span>
+                <FixtureFlag name={f.awayTeam} />
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-zinc-500">
@@ -89,7 +115,7 @@ export default function FixturesPage() {
               </div>
             </div>
             {f.competition && (
-              <div className="text-xs text-zinc-600 mt-1 ml-40">{f.competition}</div>
+              <div className="text-xs text-zinc-600 mt-1 ml-12">{f.competition}</div>
             )}
           </Link>
         ))}

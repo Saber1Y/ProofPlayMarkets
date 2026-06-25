@@ -18,6 +18,11 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
           theme: "dark",
           accentColor: "#10b981",
           walletChainType: "solana-only",
+          walletList: ["detected_solana_wallets"],
+        },
+        embeddedWallets: {
+          solana: { createOnLogin: "all-users" },
+          showWalletUIs: true,
         },
         solana: {},
       }}

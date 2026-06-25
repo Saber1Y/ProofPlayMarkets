@@ -3,6 +3,30 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { getTeamFlagUrl } from "@/lib/teams";
+
+function TeamFlag({ name, size }: { name: string; size?: number }) {
+  const src = getTeamFlagUrl(name);
+  const s = size ?? 48;
+  if (!src) {
+    return (
+      <div
+        className="rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-400 shrink-0 mx-auto"
+        style={{ width: s, height: s }}
+      >
+        {name[0]}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="rounded-sm object-cover shrink-0 mx-auto"
+      style={{ width: s, height: s }}
+    />
+  );
+}
 
 interface FixtureScore {
   snapshot: {
@@ -109,22 +133,32 @@ export default function FixtureDetailPage() {
           </span>
         </div>
 
-        {snap && (
+        {snap ? (
           <div className="mb-6">
             <div className="flex items-center justify-center gap-8 py-6">
               <div className="text-center">
-                <div className="text-lg font-medium text-zinc-300">{fixture?.homeTeam ?? "Home"}</div>
-                <div className="text-4xl font-bold mt-2">{snap.home_score}</div>
+                <TeamFlag name={fixture?.homeTeam ?? "Home"} />
+                <div className="text-lg font-medium text-zinc-300 mt-2">{fixture?.homeTeam ?? "Home"}</div>
+                <div className="text-4xl font-bold mt-1">{snap.home_score}</div>
               </div>
-              <div className="text-2xl text-zinc-600">:</div>
+              <div className="text-2xl text-zinc-600 self-center mt-8">:</div>
               <div className="text-center">
-                <div className="text-lg font-medium text-zinc-300">{fixture?.awayTeam ?? "Away"}</div>
-                <div className="text-4xl font-bold mt-2">{snap.away_score}</div>
+                <TeamFlag name={fixture?.awayTeam ?? "Away"} />
+                <div className="text-lg font-medium text-zinc-300 mt-2">{fixture?.awayTeam ?? "Away"}</div>
+                <div className="text-4xl font-bold mt-1">{snap.away_score}</div>
               </div>
             </div>
             <div className="text-center text-sm text-zinc-500">
               seq {snap.seq} &middot; {snap.period ?? "full"}
             </div>
+          </div>
+        ) : (
+          <div className="mb-6 py-8 text-center">
+            <TeamFlag name={fixture?.homeTeam ?? "Home"} size={64} />
+            <div className="text-lg font-medium text-zinc-300 mt-3">{fixture?.homeTeam ?? "Home"}</div>
+            <div className="text-zinc-600 my-2">vs</div>
+            <TeamFlag name={fixture?.awayTeam ?? "Away"} size={64} />
+            <div className="text-lg font-medium text-zinc-300 mt-3">{fixture?.awayTeam ?? "Away"}</div>
           </div>
         )}
 

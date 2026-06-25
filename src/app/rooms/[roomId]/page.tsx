@@ -87,17 +87,14 @@ export default function RoomDetailPage() {
     }
   }
 
-  async function handleLock() {
+  async function handleSettle() {
     setSettling(true);
+    setError(null);
     try {
       const res = await fetch(`/api/rooms/${roomId}/settle`, { method: "POST" });
       const data = await res.json();
       if (data.error) {
         setError(data.error);
-        // If room needs to be locked first, auto-lock then settle
-        if (data.error.includes("LOCKED")) {
-          alert("No match data yet — lock the room first, then settle.");
-        }
       } else {
         setRoom(data);
       }
@@ -291,19 +288,30 @@ export default function RoomDetailPage() {
           <div className="mt-4 pt-4 border-t border-zinc-800">
             <button
               onClick={async () => {
-                // Lock the room (simulate kickoff)
-                const res = await fetch(`/api/rooms/${roomId}/settle`, { method: "POST" });
-                if (!res.ok) {
-                  // Auto-lock then settle
-                  setSettling(true);
-                  // For now, manually call settle which will check for LOCKED
-                  setError("Lock the room first by clicking Settle when match starts.");
+                const res = await fetch(`/api/rooms/${roomId}/lock`, { method: "POST" });
+                if (res.ok) {
+                  const updated = await res.json();
+                  setRoom(updated);
+                } else {
+                  const err = await res.json();
+                  setError(err.error);
                 }
               }}
-              disabled={settling}
-              className="rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium hover:bg-yellow-500 disabled:opacity-50"
+              className="rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium hover:bg-yellow-500"
             >
-              {settling ? "Processing..." : "Lock & Settle Room"}
+              Lock Room (Kickoff)
+            </button>
+          </div>
+        )}
+
+        {room.status === "LOCKED" && (
+          <div className="mt-4 pt-4 border-t border-zinc-800">
+            <button
+              onClick={handleSettle}
+              disabled={settling}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {settling ? "Processing..." : "Settle Room"}
             </button>
           </div>
         )}

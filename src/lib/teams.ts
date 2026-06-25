@@ -63,5 +63,12 @@ export function getTeamInitials(name: string): string {
 }
 
 export function teamCode(name: string): string {
-  return teamToCode[name] ?? fallback(name);
+  const code = teamToCode[name];
+  if (code) return code;
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { getTeamFlagUrl } from "@/lib/teams";
+import { FixtureCard } from "@/components/fixtures/FixtureCard";
 
 interface Fixture {
   id: number;
@@ -11,35 +10,19 @@ interface Fixture {
   startDate: string;
   status: string;
   competition: string;
+  homeScore?: number;
+  awayScore?: number;
+  minute?: string;
 }
 
-function FixtureFlag({ name, size }: { name: string; size?: number }) {
-  const src = getTeamFlagUrl(name);
-  const s = size ?? 24;
-  if (!src) {
-    return (
-      <div
-        className="rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0"
-        style={{ width: s, height: s }}
-      >
-        {name[0]}
-      </div>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={name}
-      className="rounded-sm object-cover shrink-0"
-      style={{ width: s, height: s }}
-    />
-  );
-}
+const FILTERS = ["All", "Live", "Upcoming", "Finished"] as const;
+type Filter = (typeof FILTERS)[number];
 
 export default function FixturesPage() {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("All");
 
   useEffect(() => {
     fetch("/api/txline/fixtures")
@@ -55,71 +38,131 @@ export default function FixturesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const live = fixtures.filter((f) => f.status === "live");
+  const upcoming = fixtures.filter((f) => f.status === "scheduled" || f.status === "upcoming");
+  const finished = fixtures.filter((f) => f.status === "finished" || f.status === "final");
+
+  const filtered =
+    filter === "All"
+      ? fixtures
+      : filter === "Live"
+        ? live
+        : filter === "Upcoming"
+          ? upcoming
+          : finished;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-pulse text-zinc-500">Loading fixtures...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-accent border-t-transparent" />
+          <span className="text-sm text-zinc-500">Loading fixtures...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="py-24 text-center">
-        <p className="text-red-400 mb-4">{error}</p>
-        <p className="text-zinc-500 text-sm">
-          Make sure TXLINE_JWT and TXLINE_API_TOKEN are set in your .env
-        </p>
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="glass-strong mb-4 rounded-xl p-6">
+          <p className="text-sm text-red-400">{error}</p>
+          <p className="mt-2 text-xs text-zinc-500">
+            Make sure TXLINE_JWT and TXLINE_API_TOKEN are set in your .env
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">World Cup Fixtures</h1>
-      <div className="grid gap-3">
-        {fixtures.map((f) => (
-          <Link
-            key={f.id}
-            href={`/fixtures/${f.id}`}
-            className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 hover:border-zinc-700 transition-colors"
+    <div className="flex flex-col gap-8">
+      {/* Page header */}
+      <div>
+        <span className="section-header">World Cup</span>
+        <h1 className="text-2xl font-bold">Fixtures</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          World Cup matches powered by TxLINE
+        </p>
+      </div>
+
+      {/* Featured live match */}
+      {live.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+              Live Now
+            </span>
+          </div>
+          <FixtureCard fixture={live[0]} variant="hero" />
+        </section>
+      )}
+
+      {/* Filters */}
+      <div className="flex gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              filter === f
+                ? "bg-white/10 text-white"
+                : "text-zinc-500 hover:text-zinc-300"
+            }`}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FixtureFlag name={f.homeTeam} />
-                <span className="font-medium text-right min-w-[6rem]">{f.homeTeam}</span>
-                <span className="text-zinc-600 text-xs">vs</span>
-                <span className="font-medium min-w-[6rem]">{f.awayTeam}</span>
-                <FixtureFlag name={f.awayTeam} />
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-zinc-500">
-                  {new Date(f.startDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    f.status === "live"
-                      ? "bg-green-900/50 text-green-400"
-                      : f.status === "finished"
-                        ? "bg-zinc-800 text-zinc-400"
-                        : "bg-zinc-800/50 text-zinc-500"
-                  }`}
-                >
-                  {f.status || "scheduled"}
-                </span>
-              </div>
-            </div>
-            {f.competition && (
-              <div className="text-xs text-zinc-600 mt-1 ml-12">{f.competition}</div>
-            )}
-          </Link>
+            {f}
+          </button>
         ))}
       </div>
+
+      {/* Fixture grid */}
+      {filter !== "All" && filtered.length === 0 ? (
+        <div className="flex items-center justify-center rounded-xl border border-dashed border-white/10 py-16">
+          <p className="text-sm text-zinc-500">
+            No {filter.toLowerCase()} fixtures at the moment
+          </p>
+        </div>
+      ) : filter === "All" ? (
+        <div className="flex flex-col gap-8">
+          {live.length > 0 && (
+            <div>
+              <span className="section-header mb-3 block">Live</span>
+              <div className="grid gap-2">
+                {live.map((f) => (
+                  <FixtureCard key={f.id} fixture={f} />
+                ))}
+              </div>
+            </div>
+          )}
+          {upcoming.length > 0 && (
+            <div>
+              <span className="section-header mb-3 block">Upcoming</span>
+              <div className="grid gap-2">
+                {upcoming.map((f) => (
+                  <FixtureCard key={f.id} fixture={f} />
+                ))}
+              </div>
+            </div>
+          )}
+          {finished.length > 0 && (
+            <div>
+              <span className="section-header mb-3 block">Finished</span>
+              <div className="grid gap-2">
+                {finished.map((f) => (
+                  <FixtureCard key={f.id} fixture={f} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          {filtered.map((f) => (
+            <FixtureCard key={f.id} fixture={f} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

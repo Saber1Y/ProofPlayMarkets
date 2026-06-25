@@ -1,0 +1,86 @@
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
+import fs from "fs";
+import path from "path";
+import { PREDICTION_MARKET_IDL } from "./idl";
+import { PROGRAM_ID, DEVNET_RPC } from "./constants";
+
+let _sdk: PredictionMarketServerSDK | null = null;
+
+export class PredictionMarketServerSDK {
+  program: any;
+  connection: Connection;
+  adminWallet: PublicKey;
+
+  constructor(keypair: Keypair) {
+    this.connection = new Connection(DEVNET_RPC, "confirmed");
+    const wallet = new Wallet(keypair);
+    const provider = new AnchorProvider(this.connection, wallet, {
+      commitment: "confirmed",
+    });
+    this.program = new Program(PREDICTION_MARKET_IDL, provider);
+    this.adminWallet = keypair.publicKey;
+  }
+
+  private toEnum(name: string): object {
+    const key = name.charAt(0).toLowerCase() + name.slice(1);
+    return { [key]: {} };
+  }
+
+  async initializeMarket(fixtureId: number, marketType: string, threshold: number) {
+    return this.program.methods
+      .initializeMarket({
+        fixtureId: new BN(fixtureId),
+        marketType: this.toEnum(marketType),
+        threshold: new BN(threshold),
+      })
+      .accounts({ creator: this.adminWallet })
+      .rpc();
+  }
+
+  async lockMarket(fixtureId: number) {
+    const [market] = this.marketPda(fixtureId);
+    return this.program.methods
+      .lockMarket()
+      .accounts({ creator: this.adminWallet, market })
+      .rpc();
+  }
+
+  async settleMarket(fixtureId: number, winnerSide: string, merkleRoot: number[]) {
+    const [market] = this.marketPda(fixtureId);
+    return this.program.methods
+      .settleMarket({
+        winnerSide: this.toEnum(winnerSide),
+        merkleRoot,
+      })
+      .accounts({ creator: this.adminWallet, market })
+      .rpc();
+  }
+
+  async fetchMarket(fixtureId: number) {
+    const [pda] = this.marketPda(fixtureId);
+    return this.program.account.market.fetch(pda);
+  }
+
+  marketPda(fixtureId: number): [PublicKey, number] {
+    const buf = new Uint8Array(8);
+    new DataView(buf.buffer).setBigUint64(0, BigInt(fixtureId), true);
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("market"), this.adminWallet.toBuffer(), Buffer.from(buf)],
+      PROGRAM_ID
+    );
+  }
+}
+
+export function getServerSDK(): PredictionMarketServerSDK {
+  if (_sdk) return _sdk;
+
+  const keypairPath = process.env.ADMIN_KEYPAIR_PATH
+    ? path.resolve(process.env.ADMIN_KEYPAIR_PATH)
+    : path.resolve("solana/admin-keypair.json");
+  const secret = JSON.parse(fs.readFileSync(keypairPath, "utf-8"));
+  const keypair = Keypair.fromSecretKey(Buffer.from(secret));
+
+  _sdk = new PredictionMarketServerSDK(keypair);
+  return _sdk;
+}

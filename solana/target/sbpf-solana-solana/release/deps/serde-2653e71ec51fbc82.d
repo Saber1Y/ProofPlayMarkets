@@ -1,0 +1,14 @@
+/Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/deps/serde-2653e71ec51fbc82.d: /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/build/serde-6cd3aab56cf133bc/out/private.rs
+
+/Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/deps/libserde-2653e71ec51fbc82.rlib: /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/build/serde-6cd3aab56cf133bc/out/private.rs
+
+/Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/deps/libserde-2653e71ec51fbc82.rmeta: /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/build/serde-6cd3aab56cf133bc/out/private.rs
+
+/Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/mac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/build/serde-6cd3aab56cf133bc/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/mac/codes/ProofPlayMarkets/solana/target/sbpf-solana-solana/release/build/serde-6cd3aab56cf133bc/out

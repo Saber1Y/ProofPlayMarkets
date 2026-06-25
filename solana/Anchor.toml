@@ -1,0 +1,18 @@
+[toolchain]
+anchor_version = "0.32.0"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.localnet]
+prediction_market = "BJiVyh6tNT9yQYh1HLtZksDpVjkCJhCdjDBy8v5ocUkB"
+
+[programs.devnet]
+prediction_market = "BJiVyh6tNT9yQYh1HLtZksDpVjkCJhCdjDBy8v5ocUkB"
+
+[registry]
+url = "https://api.apr.dev"
+
+[scripts]
+test = "npx ts-mocha -p ./tsconfig.json tests/**/*.ts --timeout 60000"

@@ -5,11 +5,11 @@ import Link from "next/link";
 
 interface Fixture {
   id: number;
-  home_team: string;
-  away_team: string;
-  start_date: string;
+  homeTeam: string;
+  awayTeam: string;
+  startDate: string;
   status: string;
-  competition_name?: string;
+  competition: string;
 }
 
 export default function FixturesPage() {
@@ -62,13 +62,13 @@ export default function FixturesPage() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <span className="font-medium w-36 text-right">{f.home_team}</span>
+                <span className="font-medium w-36 text-right">{f.homeTeam}</span>
                 <span className="text-zinc-600 text-sm">vs</span>
-                <span className="font-medium w-36">{f.away_team}</span>
+                <span className="font-medium w-36">{f.awayTeam}</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-zinc-500">
-                  {new Date(f.start_date).toLocaleDateString("en-US", {
+                  {new Date(f.startDate).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     hour: "2-digit",
@@ -88,8 +88,8 @@ export default function FixturesPage() {
                 </span>
               </div>
             </div>
-            {f.competition_name && (
-              <div className="text-xs text-zinc-600 mt-1 ml-40">{f.competition_name}</div>
+            {f.competition && (
+              <div className="text-xs text-zinc-600 mt-1 ml-40">{f.competition}</div>
             )}
           </Link>
         ))}

@@ -20,9 +20,9 @@ interface FixtureScore {
 
 interface FixtureInfo {
   id: number;
-  home_team: string;
-  away_team: string;
-  start_date: string;
+  homeTeam: string;
+  awayTeam: string;
+  startDate: string;
   status: string;
 }
 
@@ -81,11 +81,11 @@ export default function FixtureDetailPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold">
-              {fixture?.home_team ?? "Home"} vs {fixture?.away_team ?? "Away"}
+              {fixture?.homeTeam ?? "Home"} vs {fixture?.awayTeam ?? "Away"}
             </h1>
             {fixture && (
               <p className="text-sm text-zinc-500 mt-1">
-                {new Date(fixture.start_date).toLocaleDateString("en-US", {
+                {new Date(fixture.startDate).toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "long",
                   day: "numeric",
@@ -113,12 +113,12 @@ export default function FixtureDetailPage() {
           <div className="mb-6">
             <div className="flex items-center justify-center gap-8 py-6">
               <div className="text-center">
-                <div className="text-lg font-medium text-zinc-300">{fixture?.home_team ?? "Home"}</div>
+                <div className="text-lg font-medium text-zinc-300">{fixture?.homeTeam ?? "Home"}</div>
                 <div className="text-4xl font-bold mt-2">{snap.home_score}</div>
               </div>
               <div className="text-2xl text-zinc-600">:</div>
               <div className="text-center">
-                <div className="text-lg font-medium text-zinc-300">{fixture?.away_team ?? "Away"}</div>
+                <div className="text-lg font-medium text-zinc-300">{fixture?.awayTeam ?? "Away"}</div>
                 <div className="text-4xl font-bold mt-2">{snap.away_score}</div>
               </div>
             </div>

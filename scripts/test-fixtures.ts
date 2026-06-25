@@ -11,7 +11,7 @@ async function main() {
   const fixtures = await getFixtures();
   console.log(`Found ${fixtures.length} fixtures`);
   for (const f of fixtures.slice(0, 10)) {
-    console.log(`  ${f.id}: ${f.home_team} vs ${f.away_team} [${f.status}] ${f.start_date}`);
+    console.log(`  ${f.id}: ${f.homeTeam} vs ${f.awayTeam} [${f.status}] ${f.startDate}`);
   }
 
   if (fixtures.length > 0) {

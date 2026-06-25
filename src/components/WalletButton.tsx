@@ -1,15 +1,9 @@
 "use client";
 
-import { usePrivy, useConnectWallet } from "@privy-io/react-auth";
-import { useCallback } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 
 export function WalletButton() {
-  const { ready, authenticated, user, logout } = usePrivy();
-  const { connectWallet } = useConnectWallet();
-
-  const handleConnect = useCallback(() => {
-    connectWallet({ walletChainType: "solana-only" });
-  }, [connectWallet]);
+  const { ready, authenticated, user, login, logout } = usePrivy();
 
   if (!ready) {
     return (
@@ -42,7 +36,7 @@ export function WalletButton() {
 
   return (
     <button
-      onClick={handleConnect}
+      onClick={login}
       className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-zinc-950 hover:bg-emerald-400 transition-colors"
     >
       Connect Wallet

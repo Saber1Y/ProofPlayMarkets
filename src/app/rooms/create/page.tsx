@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 
 interface Fixture {
@@ -16,14 +17,16 @@ function CreateRoomForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fixtureId = searchParams.get("fixtureId");
+  const { ready, authenticated, user, login } = usePrivy();
 
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [selectedFixture, setSelectedFixture] = useState<string>(fixtureId || "");
   const [marketType, setMarketType] = useState<string>("TOTAL_GOALS_OVER_UNDER");
   const [threshold, setThreshold] = useState<string>("2.5");
-  const [wallet, setWallet] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const wallet = user?.wallet?.address ?? "";
 
   useEffect(() => {
     fetch("/api/txline/fixtures")
@@ -71,6 +74,25 @@ function CreateRoomForm() {
   }
 
   const selected = fixtures.find((f) => f.id === Number(selectedFixture));
+
+  if (!ready) {
+    return <div className="animate-pulse text-zinc-500 py-24 text-center">Loading...</div>;
+  }
+
+  if (!authenticated || !wallet) {
+    return (
+      <div className="max-w-xl mx-auto py-24 text-center">
+        <h1 className="text-2xl font-bold mb-4">Connect Your Wallet</h1>
+        <p className="text-zinc-400 mb-6">You need to connect a wallet to create a room.</p>
+        <button
+          onClick={login}
+          className="rounded-lg bg-emerald-500 px-6 py-3 font-medium text-zinc-950 hover:bg-emerald-400 transition-colors"
+        >
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto">
@@ -134,23 +156,19 @@ function CreateRoomForm() {
           </div>
         )}
 
-        {/* Wallet address */}
+        {/* Wallet (read-only from Privy) */}
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Your Wallet Address</label>
-          <input
-            type="text"
-            value={wallet}
-            onChange={(e) => setWallet(e.target.value)}
-            placeholder="So1a... (any value for demo)"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm"
-          />
+          <label className="block text-sm font-medium text-zinc-400 mb-1">Your Wallet</label>
+          <div className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm font-mono text-zinc-400">
+            {wallet.slice(0, 8)}...{wallet.slice(-6)}
+          </div>
         </div>
 
         {error && <div className="text-sm text-red-400">{error}</div>}
 
         <button
           onClick={handleCreate}
-          disabled={creating || !selectedFixture || !wallet}
+          disabled={creating || !selectedFixture}
           className="w-full rounded-lg bg-emerald-500 px-4 py-2.5 font-medium text-zinc-950 hover:bg-emerald-400 disabled:opacity-50 transition-colors"
         >
           {creating ? "Creating..." : "Create Room"}

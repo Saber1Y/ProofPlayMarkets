@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 
 interface Participant {
@@ -34,21 +35,27 @@ interface Room {
   createdAt: string;
   winnerSide?: string;
   settlementReceipt?: SettlementReceipt;
+  marketPda?: string;
+  initializeTx?: string;
+  lockTx?: string;
+  settleTx?: string;
 }
 
 export default function RoomDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const roomId = params.roomId as string;
+  const { ready, user } = usePrivy();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [wallet, setWallet] = useState("");
   const [selectedSide, setSelectedSide] = useState<string>("");
   const [amount, setAmount] = useState("1");
   const [joining, setJoining] = useState(false);
   const [settling, setSettling] = useState(false);
+
+  const wallet = user?.wallet?.address ?? "";
+  const isCreator = room?.createdBy?.toLowerCase() === wallet.toLowerCase();
 
   function loadRoom() {
     fetch(`/api/rooms/${roomId}`)
@@ -216,75 +223,77 @@ export default function RoomDetailPage() {
         {room.status === "OPEN" && (
           <div className="border-t border-zinc-800 pt-4 space-y-3">
             <h3 className="text-sm font-medium text-zinc-400">Join this room</h3>
-            <div className="flex gap-2">
-              {room.marketType === "TOTAL_GOALS_OVER_UNDER" ? (
-                <>
+            {!wallet ? (
+              <p className="text-sm text-zinc-500">Connect your wallet to join.</p>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  {room.marketType === "TOTAL_GOALS_OVER_UNDER" ? (
+                    <>
+                      <button
+                        onClick={() => setSelectedSide("OVER")}
+                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          selectedSide === "OVER"
+                            ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        }`}
+                      >
+                        OVER {room.threshold}
+                      </button>
+                      <button
+                        onClick={() => setSelectedSide("UNDER")}
+                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          selectedSide === "UNDER"
+                            ? "border-red-500 bg-red-500/20 text-red-400"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        }`}
+                      >
+                        UNDER {room.threshold}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setSelectedSide("HOME")}
+                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
+                          selectedSide === "HOME" ? "border-emerald-500 bg-emerald-500/20 text-emerald-400" : "border-zinc-700 text-zinc-400"
+                        }`}>HOME</button>
+                      <button onClick={() => setSelectedSide("DRAW")}
+                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
+                          selectedSide === "DRAW" ? "border-yellow-500 bg-yellow-500/20 text-yellow-400" : "border-zinc-700 text-zinc-400"
+                        }`}>DRAW</button>
+                      <button onClick={() => setSelectedSide("AWAY")}
+                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
+                          selectedSide === "AWAY" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-zinc-700 text-zinc-400"
+                        }`}>AWAY</button>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-xs font-mono text-zinc-500 truncate">
+                    {wallet.slice(0, 8)}...{wallet.slice(-6)}
+                  </div>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    min="1"
+                    className="w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-center"
+                  />
                   <button
-                    onClick={() => setSelectedSide("OVER")}
-                    className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                      selectedSide === "OVER"
-                        ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                    }`}
+                    onClick={handleJoin}
+                    disabled={joining || !selectedSide}
+                    className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
                   >
-                    OVER {room.threshold}
+                    {joining ? "..." : "Join"}
                   </button>
-                  <button
-                    onClick={() => setSelectedSide("UNDER")}
-                    className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                      selectedSide === "UNDER"
-                        ? "border-red-500 bg-red-500/20 text-red-400"
-                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
-                    }`}
-                  >
-                    UNDER {room.threshold}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => setSelectedSide("HOME")}
-                    className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
-                      selectedSide === "HOME" ? "border-emerald-500 bg-emerald-500/20 text-emerald-400" : "border-zinc-700 text-zinc-400"
-                    }`}>HOME</button>
-                  <button onClick={() => setSelectedSide("DRAW")}
-                    className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
-                      selectedSide === "DRAW" ? "border-yellow-500 bg-yellow-500/20 text-yellow-400" : "border-zinc-700 text-zinc-400"
-                    }`}>DRAW</button>
-                  <button onClick={() => setSelectedSide("AWAY")}
-                    className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
-                      selectedSide === "AWAY" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-zinc-700 text-zinc-400"
-                    }`}>AWAY</button>
-                </>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={wallet}
-                onChange={(e) => setWallet(e.target.value)}
-                placeholder="Your wallet address"
-                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="1"
-                className="w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-center"
-              />
-              <button
-                onClick={handleJoin}
-                disabled={joining || !wallet || !selectedSide}
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
-              >
-                {joining ? "..." : "Join"}
-              </button>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {/* Admin actions */}
-        {room.status === "OPEN" && (
+        {/* Admin actions — only creator can lock/settle */}
+        {room.status === "OPEN" && isCreator && (
           <div className="mt-4 pt-4 border-t border-zinc-800">
             <button
               onClick={async () => {
@@ -304,7 +313,7 @@ export default function RoomDetailPage() {
           </div>
         )}
 
-        {room.status === "LOCKED" && (
+        {room.status === "LOCKED" && isCreator && (
           <div className="mt-4 pt-4 border-t border-zinc-800">
             <button
               onClick={handleSettle}
@@ -333,8 +342,60 @@ export default function RoomDetailPage() {
         )}
       </div>
 
-      <div className="mt-4 text-xs text-zinc-600">
-        Room ID: {room.id} &middot; Created: {new Date(room.createdAt).toLocaleString()}
+      <div className="mt-4 text-xs text-zinc-600 space-y-1">
+        <div>Room ID: {room.id} &middot; Created: {new Date(room.createdAt).toLocaleString()}</div>
+        {room.initializeTx && (
+          <div>
+            Init Tx:{" "}
+            <a
+              href={`https://explorer.solana.com/tx/${room.initializeTx}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline font-mono"
+            >
+              {room.initializeTx.slice(0, 16)}...
+            </a>
+          </div>
+        )}
+        {room.lockTx && (
+          <div>
+            Lock Tx:{" "}
+            <a
+              href={`https://explorer.solana.com/tx/${room.lockTx}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-yellow-400 hover:underline font-mono"
+            >
+              {room.lockTx.slice(0, 16)}...
+            </a>
+          </div>
+        )}
+        {room.settleTx && (
+          <div>
+            Settle Tx:{" "}
+            <a
+              href={`https://explorer.solana.com/tx/${room.settleTx}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:underline font-mono"
+            >
+              {room.settleTx.slice(0, 16)}...
+            </a>
+          </div>
+        )}
+        {room.marketPda && (
+          <div>
+            Market PDA:{" "}
+            <a
+              href={`https://explorer.solana.com/account/${room.marketPda}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 hover:underline font-mono"
+            >
+              {room.marketPda.slice(0, 16)}...
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

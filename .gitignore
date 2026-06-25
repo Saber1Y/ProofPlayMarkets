@@ -5,3 +5,5 @@ node_modules/
 *.local
 .DS_Store
 out/
+solana/target/
+solana/admin-keypair.json

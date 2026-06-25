@@ -1,5 +1,5 @@
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import fs from "fs";
 import path from "path";
 import { PREDICTION_MARKET_IDL } from "./idl";
@@ -14,8 +14,18 @@ export class PredictionMarketServerSDK {
 
   constructor(keypair: Keypair) {
     this.connection = new Connection(DEVNET_RPC, "confirmed");
-    const wallet = new Wallet(keypair);
-    const provider = new AnchorProvider(this.connection, wallet, {
+    const wallet = {
+      publicKey: keypair.publicKey,
+      signTransaction: (tx: any) => {
+        tx.partialSign(keypair);
+        return tx;
+      },
+      signAllTransactions: (txs: any[]) => {
+        txs.forEach((tx) => tx.partialSign(keypair));
+        return txs;
+      },
+    };
+    const provider = new AnchorProvider(this.connection, wallet as any, {
       commitment: "confirmed",
     });
     this.program = new Program(PREDICTION_MARKET_IDL, provider);

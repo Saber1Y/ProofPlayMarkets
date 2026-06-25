@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
+import { teamCode } from "@/lib/teams";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { StatusPill } from "@/components/ui/StatusPill";
+import { TxLineBadge } from "@/components/ui/TxLineBadge";
+import { ThresholdMeter } from "@/components/rooms/ThresholdMeter";
 
 interface Participant {
   id: string;
@@ -56,6 +61,13 @@ export default function RoomDetailPage() {
 
   const wallet = user?.wallet?.address ?? "";
   const isCreator = room?.createdBy?.toLowerCase() === wallet.toLowerCase();
+  const isOverUnder = room?.marketType === "TOTAL_GOALS_OVER_UNDER";
+  const isLive = room?.status === "LIVE";
+  const isSettled = room?.status === "SETTLED";
+  const isOpen = room?.status === "OPEN";
+
+  const homeCode = teamCode(room?.homeTeam ?? "");
+  const awayCode = teamCode(room?.awayTeam ?? "");
 
   function loadRoom() {
     fetch(`/api/rooms/${roomId}`)
@@ -82,11 +94,8 @@ export default function RoomDetailPage() {
         body: JSON.stringify({ wallet, side: selectedSide, amount: Number(amount) }),
       });
       const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setRoom(data);
-      }
+      if (data.error) setError(data.error);
+      else setRoom(data);
     } catch {
       setError("Failed to join");
     } finally {
@@ -100,11 +109,8 @@ export default function RoomDetailPage() {
     try {
       const res = await fetch(`/api/rooms/${roomId}/settle`, { method: "POST" });
       const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setRoom(data);
-      }
+      if (data.error) setError(data.error);
+      else setRoom(data);
     } catch {
       setError("Failed to settle");
     } finally {
@@ -112,291 +118,382 @@ export default function RoomDetailPage() {
     }
   }
 
-  if (loading) {
-    return <div className="animate-pulse text-zinc-500 py-24 text-center">Loading room...</div>;
-  }
+  const yesPool = room?.participants
+    .filter((p) => p.side === "OVER" || p.side === "HOME")
+    .reduce((s, p) => s + p.amount, 0) ?? 0;
+  const noPool = room?.participants
+    .filter((p) => p.side === "UNDER" || p.side === "AWAY")
+    .reduce((s, p) => s + p.amount, 0) ?? 0;
 
-  if (error || !room) {
+  if (loading) {
     return (
-      <div className="py-24 text-center">
-        <p className="text-red-400 mb-4">{error || "Room not found"}</p>
-        <Link href="/rooms" className="text-emerald-400 hover:underline">Back to rooms</Link>
+      <div className="flex items-center justify-center py-24">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-accent border-t-transparent" />
       </div>
     );
   }
 
-  const overCount = room.participants.filter((p) => p.side === "OVER").reduce((s, p) => s + p.amount, 0);
-  const underCount = room.participants.filter((p) => p.side === "UNDER").reduce((s, p) => s + p.amount, 0);
-  const homeCount = room.participants.filter((p) => p.side === "HOME").reduce((s, p) => s + p.amount, 0);
-  const awayCount = room.participants.filter((p) => p.side === "AWAY").reduce((s, p) => s + p.amount, 0);
+  if (error || !room) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="glass-strong rounded-xl p-6">
+          <p className="text-sm text-red-400 mb-4">{error || "Room not found"}</p>
+          <Link href="/rooms" className="text-xs font-medium text-cyan-accent hover:text-cyan-300">
+            Back to rooms →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <Link href="/rooms" className="text-sm text-zinc-500 hover:text-zinc-300 mb-6 inline-block">
-        &larr; Back to rooms
+    <div className="flex flex-col gap-6">
+      {/* Breadcrumb */}
+      <Link
+        href="/rooms"
+        className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+      >
+        <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Back to rooms
       </Link>
 
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-xl font-bold">
-              {room.homeTeam} vs {room.awayTeam}
-            </h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              {room.marketType.replace(/_/g, " ")} &middot; Threshold: {room.threshold}
-            </p>
+      {/* Header */}
+      <div className="glass-strong rounded-2xl p-6">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+                {homeCode ? (
+                  <img src={`https://flagcdn.com/${homeCode.toLowerCase()}.svg`} alt="" className="h-6 w-6 rounded-full object-cover" />
+                ) : room.homeTeam.charAt(0)}
+              </div>
+              <span className="font-semibold text-white">{room.homeTeam}</span>
+              <span className="text-xs text-zinc-600">vs</span>
+              <span className="font-semibold text-white">{room.awayTeam}</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+                {awayCode ? (
+                  <img src={`https://flagcdn.com/${awayCode.toLowerCase()}.svg`} alt="" className="h-6 w-6 rounded-full object-cover" />
+                ) : room.awayTeam.charAt(0)}
+              </div>
+            </div>
           </div>
-          <span
-            className={`text-xs px-3 py-1 rounded-full ${
-              room.status === "OPEN"
-                ? "bg-emerald-900/50 text-emerald-400"
-                : room.status === "LOCKED"
-                  ? "bg-yellow-900/50 text-yellow-400"
-                  : "bg-blue-900/50 text-blue-400"
-            }`}
-          >
-            {room.status}
+          <div className="flex items-center gap-2">
+            {isLive && <TxLineBadge status="active" />}
+            <StatusPill status={room.status.toLowerCase() as any} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <div>
+            <span className="text-zinc-500">
+              {isOverUnder ? "Goal Rush" : "Winner Pick"}
+            </span>
+            {isOverUnder && (
+              <span className="ml-3 text-zinc-600">
+                Threshold: <span className="font-mono text-zinc-300">{room.threshold}</span>
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-zinc-600">
+            {room.participants.length} participant{room.participants.length !== 1 ? "s" : ""}
           </span>
         </div>
+      </div>
 
-        {/* Score display if settled */}
-        {room.status === "SETTLED" && room.settlementReceipt && (
-          <div className="mb-6 rounded-lg bg-zinc-800/50 p-4 text-center">
-            <div className="text-3xl font-bold mb-1">
-              {room.settlementReceipt.finalScore.home} : {room.settlementReceipt.finalScore.away}
-            </div>
-            <div className="text-sm">
-              Winner: <span className="font-semibold text-emerald-400">{room.winnerSide}</span>
-            </div>
-            <div className="text-xs text-zinc-500 mt-1">
-              Validation: {room.settlementReceipt.validationResult ? "Passed ✓" : "Failed ✗"}
-            </div>
-          </div>
-        )}
-
-        {/* Participants */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-zinc-400 mb-2">Participants ({room.participants.length})</h3>
-          {room.participants.length === 0 ? (
-            <p className="text-sm text-zinc-600">No participants yet.</p>
-          ) : (
-            <div className="space-y-1">
-              {room.participants.map((p) => (
-                <div key={p.id} className="flex items-center justify-between text-sm rounded bg-zinc-800/30 px-3 py-1.5">
-                  <span className="text-zinc-300">
-                    {p.wallet.slice(0, 6)}...{p.wallet.slice(-4)}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                      p.side === "OVER" || p.side === "HOME"
-                        ? "bg-emerald-900/50 text-emerald-400"
-                        : "bg-red-900/50 text-red-400"
-                    }`}>
-                      {p.side}
-                    </span>
-                    <span className="text-zinc-400">{p.amount}x</span>
-                  </span>
-                </div>
-              ))}
-            </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main column: Threshold + Prediction Pool */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
+          {/* Threshold meter (only for Over/Under) */}
+          {isOverUnder && (isOpen || isLive) && (
+            <ThresholdMeter current={0} threshold={room.threshold} />
           )}
 
+          {/* Settlement outcome */}
+          {isSettled && room.settlementReceipt && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">Outcome</span>
+              <div className="flex items-center justify-center gap-6 py-3">
+                <div className="text-center">
+                  <div className="text-3xl font-bold">{room.settlementReceipt.finalScore.home}</div>
+                  <div className="text-xs text-zinc-500 mt-1">{room.homeTeam}</div>
+                </div>
+                <div className="text-lg text-zinc-600">:</div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold">{room.settlementReceipt.finalScore.away}</div>
+                  <div className="text-xs text-zinc-500 mt-1">{room.awayTeam}</div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+                <span className="text-zinc-500">Winning side:</span>
+                <span className="font-semibold text-green-accent">{room.winnerSide}</span>
+                {room.settlementReceipt.validationResult && (
+                  <span className="txline-badge bg-green-500/20 text-green-400 border-green-500/30">
+                    ✓ Verified
+                  </span>
+                )}
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Prediction Pool */}
+          <GlassCard className="p-5" hover={false}>
+            <span className="section-header mb-3 block">Prediction Pool</span>
+            {room.participants.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-sm text-zinc-600">
+                No participants yet. Be the first to join.
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-green-accent/20 bg-green-accent/[0.03] p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-2 w-2 rounded-full bg-green-accent" />
+                    <span className="text-sm font-medium text-green-accent">
+                      {isOverUnder ? "YES — 3+ goals" : room.homeTeam}
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {yesPool}
+                  </div>
+                  <div className="text-xs text-zinc-600">
+                    {room.participants.filter((p) => p.side === "OVER" || p.side === "HOME").length} participants
+                  </div>
+                </div>
+                <div className="rounded-xl border border-red-500/20 bg-red-500/[0.03] p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-2 w-2 rounded-full bg-red-400" />
+                    <span className="text-sm font-medium text-red-400">
+                      {isOverUnder ? "NO — 2 or fewer" : room.awayTeam}
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {noPool}
+                  </div>
+                  <div className="text-xs text-zinc-600">
+                    {room.participants.filter((p) => p.side === "UNDER" || p.side === "AWAY").length} participants
+                  </div>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+
+          {/* Participant list */}
           {room.participants.length > 0 && (
-            <div className="flex gap-4 mt-2 text-xs text-zinc-500">
-              {room.marketType === "TOTAL_GOALS_OVER_UNDER" ? (
-                <>
-                  <span>OVER: {overCount}x</span>
-                  <span>UNDER: {underCount}x</span>
-                </>
-              ) : (
-                <>
-                  <span>HOME: {homeCount}x</span>
-                  <span>AWAY: {awayCount}x</span>
-                </>
-              )}
-            </div>
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">Participants</span>
+              <div className="flex flex-col gap-1">
+                {room.participants.map((p) => {
+                  const isYes = p.side === "OVER" || p.side === "HOME";
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-lg bg-white/[0.02] px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`h-1.5 w-1.5 rounded-full ${isYes ? "bg-green-accent" : "bg-red-400"}`} />
+                        <span className="text-xs font-mono text-zinc-400">
+                          {p.wallet.slice(0, 6)}...{p.wallet.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-mono ${isYes ? "text-green-accent" : "text-red-400"}`}>
+                          {p.side}
+                        </span>
+                        <span className="text-xs text-zinc-600">
+                          {p.amount}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </GlassCard>
           )}
         </div>
 
-        {/* Join form (only when OPEN) */}
-        {room.status === "OPEN" && (
-          <div className="border-t border-zinc-800 pt-4 space-y-3">
-            <h3 className="text-sm font-medium text-zinc-400">Join this room</h3>
-            {!wallet ? (
-              <p className="text-sm text-zinc-500">Connect your wallet to join.</p>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  {room.marketType === "TOTAL_GOALS_OVER_UNDER" ? (
-                    <>
+        {/* Right column: Join + Actions */}
+        <div className="flex flex-col gap-4">
+          {/* Join (if open) */}
+          {isOpen && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">Join Room</span>
+
+              {!wallet ? (
+                <p className="text-sm text-zinc-500">
+                  Connect your wallet to join this prediction room.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {isOverUnder ? (
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setSelectedSide("OVER")}
-                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                        className={`rounded-xl border p-3 text-center transition-all ${
                           selectedSide === "OVER"
-                            ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                            : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                            ? "border-green-accent/40 bg-green-accent/10 text-green-accent"
+                            : "border-white/10 text-zinc-400 hover:border-white/20"
                         }`}
                       >
-                        OVER {room.threshold}
+                        <div className="text-sm font-semibold">YES</div>
+                        <div className="text-[10px] text-zinc-600">3+ goals</div>
                       </button>
                       <button
                         onClick={() => setSelectedSide("UNDER")}
-                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                        className={`rounded-xl border p-3 text-center transition-all ${
                           selectedSide === "UNDER"
-                            ? "border-red-500 bg-red-500/20 text-red-400"
-                            : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                            ? "border-red-500/40 bg-red-500/10 text-red-400"
+                            : "border-white/10 text-zinc-400 hover:border-white/20"
                         }`}
                       >
-                        UNDER {room.threshold}
+                        <div className="text-sm font-semibold">NO</div>
+                        <div className="text-[10px] text-zinc-600">2 or fewer</div>
                       </button>
-                    </>
+                    </div>
                   ) : (
-                    <>
-                      <button onClick={() => setSelectedSide("HOME")}
-                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
-                          selectedSide === "HOME" ? "border-emerald-500 bg-emerald-500/20 text-emerald-400" : "border-zinc-700 text-zinc-400"
-                        }`}>HOME</button>
-                      <button onClick={() => setSelectedSide("DRAW")}
-                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
-                          selectedSide === "DRAW" ? "border-yellow-500 bg-yellow-500/20 text-yellow-400" : "border-zinc-700 text-zinc-400"
-                        }`}>DRAW</button>
-                      <button onClick={() => setSelectedSide("AWAY")}
-                        className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium ${
-                          selectedSide === "AWAY" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-zinc-700 text-zinc-400"
-                        }`}>AWAY</button>
-                    </>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["HOME", "DRAW", "AWAY"].map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setSelectedSide(s)}
+                          className={`rounded-xl border p-3 text-center transition-all ${
+                            selectedSide === s
+                              ? "border-green-accent/40 bg-green-accent/10 text-green-accent"
+                              : "border-white/10 text-zinc-400 hover:border-white/20"
+                          }`}
+                        >
+                          <div className="text-sm font-semibold">{s}</div>
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </div>
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-xs font-mono text-zinc-500 truncate">
-                    {wallet.slice(0, 8)}...{wallet.slice(-6)}
-                  </div>
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    min="1"
-                    className="w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-center"
-                  />
-                  <button
-                    onClick={handleJoin}
-                    disabled={joining || !selectedSide}
-                    className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
-                  >
-                    {joining ? "..." : "Join"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
-        {/* Admin actions — only creator can lock/settle */}
-        {room.status === "OPEN" && isCreator && (
-          <div className="mt-4 pt-4 border-t border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      min="1"
+                      className="glass-input w-20 px-3 py-2 text-sm text-center"
+                      placeholder="1"
+                    />
+                    <span className="text-xs text-zinc-600">entries</span>
+                    <button
+                      onClick={handleJoin}
+                      disabled={joining || !selectedSide}
+                      className="ml-auto rounded-lg bg-green-accent px-4 py-2 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
+                    >
+                      {joining ? "Joining..." : "Join"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </GlassCard>
+          )}
+
+          {/* Verification preview */}
+          <GlassCard className="p-4" hover={false}>
+            <span className="section-header mb-2 block">Verification</span>
+            <div className="flex flex-col gap-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600">Data source</span>
+                <span className="font-medium text-cyan-accent">TxLINE</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600">Stat keys</span>
+                <span className="font-mono text-zinc-300">
+                  {isOverUnder ? "1 + 2" : "winner"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600">Rule</span>
+                <span className="font-mono text-zinc-300">
+                  {isOverUnder ? `goals > ${room.threshold}` : "winner"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600">Settlement</span>
+                <span className="text-zinc-300">Automatic</span>
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Admin actions */}
+          {isOpen && isCreator && (
             <button
               onClick={async () => {
                 const res = await fetch(`/api/rooms/${roomId}/lock`, { method: "POST" });
-                if (res.ok) {
-                  const updated = await res.json();
-                  setRoom(updated);
-                } else {
-                  const err = await res.json();
-                  setError(err.error);
-                }
+                if (res.ok) setRoom(await res.json());
+                else setError((await res.json()).error);
               }}
-              className="rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium hover:bg-yellow-500"
+              className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
             >
               Lock Room (Kickoff)
             </button>
-          </div>
-        )}
-
-        {room.status === "LOCKED" && isCreator && (
-          <div className="mt-4 pt-4 border-t border-zinc-800">
+          )}
+          {room.status === "LOCKED" && isCreator && (
             <button
               onClick={handleSettle}
               disabled={settling}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500 disabled:opacity-50"
+              className="w-full rounded-xl bg-green-accent px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
             >
-              {settling ? "Processing..." : "Settle Room"}
+              {settling ? "Settling..." : "Settle Room"}
             </button>
-          </div>
-        )}
-
-        {/* Settled: show receipt link */}
-        {room.status === "SETTLED" && room.settlementReceipt && (
-          <div className="mt-4 pt-4 border-t border-zinc-800">
+          )}
+          {isSettled && (
             <Link
               href={`/rooms/${room.id}/receipt`}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium inline-block hover:bg-blue-500"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-cyan-accent/30 bg-cyan-accent/10 px-4 py-2.5 text-xs font-medium text-cyan-accent transition-colors hover:bg-cyan-accent/20"
             >
               View Settlement Receipt
+              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </Link>
-          </div>
-        )}
+          )}
 
-        {error && (
-          <div className="mt-3 text-sm text-red-400">{error}</div>
-        )}
+          {/* Tx explorer links */}
+          <div className="flex flex-col gap-1.5 text-[10px] text-zinc-600">
+            <div className="font-mono">Room #{room.id}</div>
+            {room.initializeTx && (
+              <a
+                href={`https://explorer.solana.com/tx/${room.initializeTx}?cluster=devnet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                init: {room.initializeTx.slice(0, 12)}...
+              </a>
+            )}
+            {room.lockTx && (
+              <a
+                href={`https://explorer.solana.com/tx/${room.lockTx}?cluster=devnet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                lock: {room.lockTx.slice(0, 12)}...
+              </a>
+            )}
+            {room.settleTx && (
+              <a
+                href={`https://explorer.solana.com/tx/${room.settleTx}?cluster=devnet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                settle: {room.settleTx.slice(0, 12)}...
+              </a>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-4 text-xs text-zinc-600 space-y-1">
-        <div>Room ID: {room.id} &middot; Created: {new Date(room.createdAt).toLocaleString()}</div>
-        {room.initializeTx && (
-          <div>
-            Init Tx:{" "}
-            <a
-              href={`https://explorer.solana.com/tx/${room.initializeTx}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-emerald-400 hover:underline font-mono"
-            >
-              {room.initializeTx.slice(0, 16)}...
-            </a>
-          </div>
-        )}
-        {room.lockTx && (
-          <div>
-            Lock Tx:{" "}
-            <a
-              href={`https://explorer.solana.com/tx/${room.lockTx}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-yellow-400 hover:underline font-mono"
-            >
-              {room.lockTx.slice(0, 16)}...
-            </a>
-          </div>
-        )}
-        {room.settleTx && (
-          <div>
-            Settle Tx:{" "}
-            <a
-              href={`https://explorer.solana.com/tx/${room.settleTx}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:underline font-mono"
-            >
-              {room.settleTx.slice(0, 16)}...
-            </a>
-          </div>
-        )}
-        {room.marketPda && (
-          <div>
-            Market PDA:{" "}
-            <a
-              href={`https://explorer.solana.com/account/${room.marketPda}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:underline font-mono"
-            >
-              {room.marketPda.slice(0, 16)}...
-            </a>
-          </div>
-        )}
-      </div>
+      {error && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

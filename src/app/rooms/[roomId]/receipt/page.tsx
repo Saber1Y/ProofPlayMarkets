@@ -13,6 +13,14 @@ interface PayoutSummary {
   amount: number;
 }
 
+interface Participant {
+  id: string;
+  wallet: string;
+  side: string;
+  amount: number;
+  claimed: boolean;
+}
+
 interface Receipt {
   fixtureId: number;
   roomId: string;
@@ -30,6 +38,8 @@ interface Receipt {
   payoutSummary: PayoutSummary[];
   homeTeam?: string;
   awayTeam?: string;
+  participants?: Participant[];
+  status?: string;
 }
 
 export default function ReceiptPage() {
@@ -264,33 +274,90 @@ export default function ReceiptPage() {
         </div>
       </GlassCard>
 
+      {/* All participants with outcomes */}
+      {receipt.participants && receipt.participants.length > 0 && (
+        <GlassCard className="mb-6 p-5" hover={false}>
+          <span className="section-header mb-4 block">
+            Participants
+            {receipt.status === "CLAIMABLE" && (
+              <span className="ml-2 text-[10px] font-normal text-amber-400">Claimable</span>
+            )}
+          </span>
+          <div className="flex flex-col gap-1">
+            {receipt.participants.map((p, i) => {
+              const isWinner = p.side === receipt.winnerSide;
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                      isWinner ? "bg-green-accent/10 text-green-accent" : "bg-red-500/10 text-red-400"
+                    }`}>
+                      <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                        {isWinner ? (
+                          <path d="M2.5 6l2.5 2.5L9.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        ) : (
+                          <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        )}
+                      </svg>
+                    </span>
+                    <span className="text-xs font-mono text-zinc-400">
+                      {p.wallet.slice(0, 8)}...{p.wallet.slice(-4)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-mono ${isWinner ? "text-green-accent" : "text-red-400"}`}>
+                      {p.side}
+                    </span>
+                    <span className="text-xs text-zinc-600">{p.amount}</span>
+                    <span className={`text-[10px] ${isWinner ? (p.claimed ? "text-green-accent" : "text-amber-400") : "text-zinc-700"}`}>
+                      {isWinner ? (p.claimed ? "Claimed" : "Won") : "Lost"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+      )}
+
       {/* Payouts */}
       <GlassCard className="mb-6 p-5" hover={false}>
-        <span className="section-header mb-4 block">Payouts</span>
+        <span className="section-header mb-4 block">Winners Payout</span>
         {receipt.payoutSummary.length === 0 ? (
           <div className="flex items-center justify-center py-6 text-sm text-zinc-600">
             No winners — no participants on the winning side.
           </div>
         ) : (
           <div className="flex flex-col gap-1">
-            {receipt.payoutSummary.map((p, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-2.5"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-accent/10 text-[10px] font-bold text-green-accent">
-                    {i + 1}
-                  </span>
-                  <span className="text-xs font-mono text-zinc-400">
-                    {p.participant.slice(0, 8)}...{p.participant.slice(-4)}
+            {receipt.payoutSummary.map((p, i) => {
+              const participant = receipt.participants?.find(
+                (pp) => pp.wallet === p.participant
+              );
+              return (
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-accent/10 text-[10px] font-bold text-green-accent">
+                      {i + 1}
+                    </span>
+                    <span className="text-xs font-mono text-zinc-400">
+                      {p.participant.slice(0, 8)}...{p.participant.slice(-4)}
+                    </span>
+                    {participant?.claimed && (
+                      <span className="text-[10px] text-green-accent/60">Claimed</span>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold text-green-accent">
+                    {p.amount}
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-green-accent">
-                  {p.amount}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </GlassCard>

@@ -10,12 +10,23 @@ export async function GET(
   if (!room) {
     return NextResponse.json({ error: "Room not found" }, { status: 404 });
   }
-  if (room.status !== "SETTLED" || !room.settlementReceipt) {
+  if (room.status !== "SETTLED" && room.status !== "CLAIMABLE") {
     return NextResponse.json({ error: "Room not yet settled" }, { status: 400 });
+  }
+  if (!room.settlementReceipt) {
+    return NextResponse.json({ error: "No settlement receipt found" }, { status: 400 });
   }
   return NextResponse.json({
     ...room.settlementReceipt,
     homeTeam: room.homeTeam,
     awayTeam: room.awayTeam,
+    participants: room.participants.map((p) => ({
+      id: p.id,
+      wallet: p.wallet,
+      side: p.side,
+      amount: p.amount,
+      claimed: p.claimed,
+    })),
+    status: room.status,
   });
 }

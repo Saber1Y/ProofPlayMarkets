@@ -43,7 +43,7 @@ export default function RoomsPage() {
   const grouped = {
     active: rooms.filter((r) => r.status === "OPEN" || r.status === "LOCKED" || r.status === "LIVE"),
     awaiting: rooms.filter((r) => r.status === "AWAITING_PROOF"),
-    settled: rooms.filter((r) => r.status === "SETTLED" || r.status === "CLAIMABLE"),
+    settled: rooms.filter((r) => r.status === "SETTLED" || r.status === "CLAIMABLE" || r.status === "CANCELLED"),
   };
 
   const tabRooms =

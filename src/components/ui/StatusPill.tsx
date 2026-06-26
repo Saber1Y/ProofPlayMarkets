@@ -5,6 +5,7 @@ type Status =
   | "awaiting_proof"
   | "settled"
   | "claimable"
+  | "cancelled"
   | "upcoming"
   | "final"
   | "active";
@@ -16,6 +17,7 @@ const statusConfig: Record<Status, { color: string; label: string }> = {
   awaiting_proof: { color: "bg-cyan-500 animate-pulse", label: "Awaiting Proof" },
   settled: { color: "bg-green-500", label: "Settled" },
   claimable: { color: "bg-gold", label: "Claimable" },
+  cancelled: { color: "bg-red-500", label: "Cancelled" },
   upcoming: { color: "bg-zinc-500", label: "Upcoming" },
   final: { color: "bg-zinc-500", label: "Final" },
   active: { color: "bg-green-500", label: "Active" },

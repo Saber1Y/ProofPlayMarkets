@@ -1,8 +1,33 @@
 export type MarketType = "TOTAL_GOALS_OVER_UNDER" | "MATCH_WINNER";
 
-export type RoomStatus = "OPEN" | "LOCKED" | "SETTLED";
+export type RoomStatus =
+  | "OPEN"
+  | "LOCKED"
+  | "LIVE"
+  | "AWAITING_PROOF"
+  | "SETTLED"
+  | "CLAIMABLE"
+  | "CANCELLED";
 
 export type Side = "OVER" | "UNDER" | "HOME" | "AWAY" | "DRAW";
+
+export interface ActivityLogEntry {
+  id: string;
+  type:
+    | "ROOM_CREATED"
+    | "USER_JOINED"
+    | "ROOM_LOCKED"
+    | "MATCH_LIVE"
+    | "MATCH_ENDED"
+    | "PROOF_FETCHING"
+    | "PROOF_RECEIVED"
+    | "ROOM_SETTLED"
+    | "WINNER_CLAIMED"
+    | "ROOM_CANCELLED";
+  wallet?: string;
+  message: string;
+  timestamp: string;
+}
 
 export interface Participant {
   id: string;
@@ -10,6 +35,7 @@ export interface Participant {
   side: Side;
   amount: number;
   claimed: boolean;
+  joinTx?: string;
 }
 
 export interface SettlementReceipt {
@@ -42,10 +68,13 @@ export interface Room {
   createdAt: string;
   winnerSide?: Side;
   settlementReceipt?: SettlementReceipt;
+  activityLog: ActivityLogEntry[];
   marketPda?: string;
   initializeTx?: string;
   lockTx?: string;
   settleTx?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
 }
 
 export interface CreateRoomRequest {

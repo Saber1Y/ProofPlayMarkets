@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRoom, settleRoom } from "@/lib/rooms/store";
+import { getRoom, setAwaitingProof, settleRoom } from "@/lib/rooms/store";
 import { ensureTxLINEInit } from "@/lib/txline/server-init";
 import { getScoreSnapshot, getStatValidation } from "@/lib/txline/client";
 import { getServerSDK } from "@/lib/solana/server";
@@ -14,12 +14,18 @@ export async function POST(
   if (!room) {
     return NextResponse.json({ error: "Room not found" }, { status: 404 });
   }
-  if (room.status !== "LOCKED") {
+  // Anyone can settle — permissionless
+  if (room.status !== "LOCKED" && room.status !== "AWAITING_PROOF") {
     return NextResponse.json({ error: "Room must be LOCKED before settling" }, { status: 400 });
   }
 
   try {
     ensureTxLINEInit();
+
+    // If first time, mark as awaiting proof
+    if (room.status === "LOCKED") {
+      setAwaitingProof(id);
+    }
 
     // 1. Fetch latest score from TxLINE
     const snapshot = await getScoreSnapshot(room.fixtureId);
@@ -27,12 +33,20 @@ export async function POST(
     const awayScore = Number(snapshot.away_score ?? 0);
     const total = homeScore + awayScore;
 
+    // Check if match is truly finished
+    const matchFinished = snapshot.status?.toLowerCase() === "finished" || snapshot.status?.toLowerCase() === "final";
+    if (!matchFinished && room.status === "AWAITING_PROOF") {
+      return NextResponse.json({
+        error: "Match not yet finished. Current status: " + snapshot.status,
+        awaitingProof: true,
+      }, { status: 400 });
+    }
+
     // 2. Determine winner
     let winnerSide: Side;
     if (room.marketType === "TOTAL_GOALS_OVER_UNDER") {
       winnerSide = total > room.threshold ? "OVER" : "UNDER";
     } else {
-      // MATCH_WINNER
       if (homeScore > awayScore) winnerSide = "HOME";
       else if (awayScore > homeScore) winnerSide = "AWAY";
       else winnerSide = "DRAW";
@@ -83,6 +97,6 @@ export async function POST(
     return NextResponse.json(settled);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Settlement failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg, awaitingProof: true }, { status: 500 });
   }
 }

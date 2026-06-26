@@ -33,18 +33,27 @@ export class PredictionMarketServerSDK {
   }
 
   private toEnum(name: string): object {
-    const key = name.charAt(0).toLowerCase() + name.slice(1);
+    const key = name
+      .toLowerCase()
+      .split("_")
+      .map((s, i) => i === 0 ? s : s.charAt(0).toUpperCase() + s.slice(1))
+      .join("");
     return { [key]: {} };
   }
 
   async initializeMarket(fixtureId: number, marketType: string, threshold: number) {
+    const [market] = this.marketPda(fixtureId);
     return this.program.methods
       .initializeMarket({
         fixtureId: new BN(fixtureId),
         marketType: this.toEnum(marketType),
         threshold: new BN(threshold),
       })
-      .accounts({ creator: this.adminWallet })
+      .accounts({
+        creator: this.adminWallet,
+        market,
+        systemProgram: PublicKey.default,
+      })
       .rpc();
   }
 

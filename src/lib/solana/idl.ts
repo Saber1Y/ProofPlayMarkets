@@ -5,17 +5,19 @@ export const PREDICTION_MARKET_IDL: any = {
   instructions: [
     {
       name: "initializeMarket",
+      discriminator: [35, 35, 189, 193, 155, 48, 170, 203],
       accounts: [
         { name: "creator", writable: true, signer: true },
         { name: "market", writable: true, signer: false },
         { name: "systemProgram", writable: false, signer: false },
       ],
       args: [
-        { name: "params", type: { defined: "InitializeMarketParams" } },
+        { name: "params", type: { defined: { name: "InitializeMarketParams" } } },
       ],
     },
     {
       name: "lockMarket",
+      discriminator: [107, 8, 184, 91, 223, 13, 180, 38],
       accounts: [
         { name: "creator", writable: true, signer: true },
         { name: "market", writable: true, signer: false },
@@ -24,6 +26,7 @@ export const PREDICTION_MARKET_IDL: any = {
     },
     {
       name: "joinMarket",
+      discriminator: [141, 113, 87, 152, 182, 213, 41, 202],
       accounts: [
         { name: "participantWallet", writable: true, signer: true },
         { name: "market", writable: true, signer: false },
@@ -31,21 +34,23 @@ export const PREDICTION_MARKET_IDL: any = {
         { name: "systemProgram", writable: false, signer: false },
       ],
       args: [
-        { name: "params", type: { defined: "JoinMarketParams" } },
+        { name: "params", type: { defined: { name: "JoinMarketParams" } } },
       ],
     },
     {
       name: "settleMarket",
+      discriminator: [193, 153, 95, 216, 166, 6, 144, 217],
       accounts: [
         { name: "creator", writable: true, signer: true },
         { name: "market", writable: true, signer: false },
       ],
       args: [
-        { name: "params", type: { defined: "SettleMarketParams" } },
+        { name: "params", type: { defined: { name: "SettleMarketParams" } } },
       ],
     },
     {
       name: "claimPayout",
+      discriminator: [127, 240, 132, 62, 227, 198, 146, 133],
       accounts: [
         { name: "claimer", writable: true, signer: true },
         { name: "market", writable: true, signer: false },
@@ -58,37 +63,33 @@ export const PREDICTION_MARKET_IDL: any = {
   accounts: [
     {
       name: "Market",
+      discriminator: [219, 190, 213, 55, 0, 227, 198, 154],
+    },
+    {
+      name: "Participant",
+      discriminator: [32, 142, 108, 79, 247, 179, 54, 6],
+    },
+  ],
+  types: [
+    {
+      name: "Market",
       type: {
         kind: "struct",
         fields: [
-          { name: "creator", type: "publicKey" },
+          { name: "creator", type: "pubkey" },
           { name: "fixtureId", type: "u64" },
           {
             name: "marketType",
-            type: {
-              defined: {
-                name: "MarketType",
-              },
-            },
+            type: { defined: { name: "MarketType" } },
           },
           { name: "threshold", type: "u64" },
           {
             name: "status",
-            type: {
-              defined: {
-                name: "MarketStatus",
-              },
-            },
+            type: { defined: { name: "MarketStatus" } },
           },
           {
             name: "winnerSide",
-            type: {
-              option: {
-                defined: {
-                  name: "Side",
-                },
-              },
-            },
+            type: { option: { defined: { name: "Side" } } },
           },
           { name: "merkleRoot", type: { array: ["u8", 32] } },
           { name: "totalOverStake", type: "u64" },
@@ -105,8 +106,8 @@ export const PREDICTION_MARKET_IDL: any = {
       type: {
         kind: "struct",
         fields: [
-          { name: "market", type: "publicKey" },
-          { name: "wallet", type: "publicKey" },
+          { name: "market", type: "pubkey" },
+          { name: "wallet", type: "pubkey" },
           { name: "side", type: { defined: { name: "Side" } } },
           { name: "amount", type: "u64" },
           { name: "claimed", type: "bool" },
@@ -114,8 +115,6 @@ export const PREDICTION_MARKET_IDL: any = {
         ],
       },
     },
-  ],
-  types: [
     {
       name: "InitializeMarketParams",
       type: {

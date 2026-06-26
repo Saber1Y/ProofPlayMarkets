@@ -32,12 +32,22 @@ function headers(): HeadersInit {
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const { baseUrl } = getConfig();
-  const res = await fetch(`${baseUrl}${url}`, { ...init, headers: { ...headers(), ...init?.headers } });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`TxLINE ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${baseUrl}${url}`, {
+      ...init,
+      headers: { ...headers(), ...init?.headers },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`TxLINE ${res.status}: ${text}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json();
 }
 
 function normalizeFixture(raw: TxLINEFixtureRaw): TxLINEFixture {

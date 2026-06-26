@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     headers: {
       Authorization: `Bearer ${jwt}`,
       "X-Api-Token": apiToken,
+      Accept: "text/event-stream",
     },
   });
 
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "Access-Control-Allow-Origin": "*",
     },
   });
 }

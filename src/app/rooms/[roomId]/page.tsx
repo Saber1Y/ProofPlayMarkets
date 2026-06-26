@@ -9,6 +9,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { TxLineBadge } from "@/components/ui/TxLineBadge";
 import { ThresholdMeter } from "@/components/rooms/ThresholdMeter";
+import { useLiveScore } from "@/lib/txline/useLiveScore";
 
 interface Participant {
   id: string;
@@ -68,6 +69,13 @@ export default function RoomDetailPage() {
 
   const homeCode = teamCode(room?.homeTeam ?? "");
   const awayCode = teamCode(room?.awayTeam ?? "");
+
+  const { score: liveScore, connected: liveConnected } = useLiveScore(
+    room?.fixtureId ?? 0
+  );
+  const totalGoals = liveScore
+    ? liveScore.homeScore + liveScore.awayScore
+    : null;
 
   function loadRoom() {
     fetch(`/api/rooms/${roomId}`)
@@ -170,7 +178,15 @@ export default function RoomDetailPage() {
                 ) : room.homeTeam.charAt(0)}
               </div>
               <span className="font-semibold text-white">{room.homeTeam}</span>
-              <span className="text-xs text-zinc-600">vs</span>
+              {liveScore ? (
+                <>
+                  <span className="text-sm font-mono font-bold text-green-accent">{liveScore.homeScore}</span>
+                  <span className="text-xs text-zinc-600">:</span>
+                  <span className="text-sm font-mono font-bold text-green-accent">{liveScore.awayScore}</span>
+                </>
+              ) : (
+                <span className="text-xs text-zinc-600">vs</span>
+              )}
               <span className="font-semibold text-white">{room.awayTeam}</span>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
                 {awayCode ? (
@@ -207,7 +223,7 @@ export default function RoomDetailPage() {
         <div className="lg:col-span-2 flex flex-col gap-4">
           {/* Threshold meter (only for Over/Under) */}
           {isOverUnder && (isOpen || isLive) && (
-            <ThresholdMeter current={0} threshold={room.threshold} />
+            <ThresholdMeter current={totalGoals ?? 0} threshold={room.threshold} />
           )}
 
           {/* Settlement outcome */}

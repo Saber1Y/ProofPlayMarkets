@@ -3,24 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { teamCode } from "@/lib/teams";
 import { TxLineBadge } from "@/components/ui/TxLineBadge";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { GlassCard } from "@/components/ui/GlassCard";
-
-interface FixtureScore {
-  snapshot: {
-    fixture_id: number;
-    seq: number;
-    status: string;
-    home_score: number;
-    away_score: number;
-    stats: Record<string, number>;
-    timestamp: string;
-    period?: string;
-  };
-  updates: unknown[];
-}
+import { LiveScoreBanner } from "@/components/fixtures/LiveScoreBanner";
+import { useLiveScore } from "@/lib/txline/useLiveScore";
+import { ScoreSkeleton } from "@/components/ui/Skeleton";
 
 interface FixtureInfo {
   id: number;
@@ -62,22 +50,18 @@ export default function FixtureDetailPage() {
   const params = useParams();
   const fixtureId = params.fixtureId as string;
   const [fixture, setFixture] = useState<FixtureInfo | null>(null);
-  const [score, setScore] = useState<FixtureScore | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { score: liveScore } = useLiveScore(Number(fixtureId));
 
   useEffect(() => {
     async function load() {
       try {
-        const [fRes, sRes] = await Promise.all([
-          fetch("/api/txline/fixtures"),
-          fetch(`/api/txline/scores/${fixtureId}`),
-        ]);
-        const fixtures: FixtureInfo[] = await fRes.json();
-        const scoreData: FixtureScore = await sRes.json();
+        const res = await fetch("/api/txline/fixtures");
+        const fixtures: FixtureInfo[] = await res.json();
         const match = fixtures.find((f) => f.id === Number(fixtureId));
         if (match) setFixture(match);
-        setScore(scoreData);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -87,12 +71,20 @@ export default function FixtureDetailPage() {
     load();
   }, [fixtureId]);
 
-  if (loading) {
+  const isLive = liveScore?.status === "in_progress";
+  const isFinished = liveScore?.status === "finished";
+  const hasScore = liveScore !== null && (isLive || isFinished);
+
+  if (loading && !fixture) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-accent border-t-transparent" />
-          <span className="text-sm text-zinc-500">Loading fixture...</span>
+      <div className="flex flex-col gap-6">
+        <div className="h-3 w-24 animate-pulse rounded bg-white/5" />
+        <div className="glass-strong rounded-2xl p-6">
+          <div className="mb-4 flex justify-between">
+            <div className="h-3 w-40 animate-pulse rounded bg-white/5" />
+            <div className="h-5 w-20 animate-pulse rounded-full bg-white/5" />
+          </div>
+          <ScoreSkeleton />
         </div>
       </div>
     );
@@ -107,14 +99,6 @@ export default function FixtureDetailPage() {
       </div>
     );
   }
-
-  const snap = score?.snapshot;
-  const isLive = snap?.status === "live" || snap?.status === "in_progress";
-  const isFinished = snap?.status === "finished" || snap?.status === "closed";
-  const hasScore = snap && (isLive || isFinished);
-
-  const homeCode = teamCode(fixture?.homeTeam ?? "");
-  const awayCode = teamCode(fixture?.awayTeam ?? "");
 
   return (
     <div className="flex flex-col gap-6">
@@ -156,95 +140,50 @@ export default function FixtureDetailPage() {
         </div>
 
         {/* Scoreboard */}
-        <div className="flex items-center justify-between py-4">
-          <div className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-              {homeCode ? (
-                <img
-                  src={`https://flagcdn.com/${homeCode.toLowerCase()}.svg`}
-                  alt={fixture?.homeTeam ?? ""}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-xl font-bold text-zinc-400">
-                  {fixture?.homeTeam?.charAt(0) ?? "?"}
-                </span>
-              )}
-            </div>
-            <span className="text-sm font-medium text-zinc-200">
-              {fixture?.homeTeam ?? "Home"}
-            </span>
-            {snap && (
-              <span className="text-4xl font-bold tracking-tight">
-                {snap.home_score}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center gap-2 px-6">
-            {hasScore ? (
-              <>
-                <span className="text-xs font-mono text-zinc-600">
-                  {snap.period ?? "Full Time"}
-                </span>
-                {snap.status && (
-                  <span className="text-[10px] text-zinc-600">
-                    seq {snap.seq}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-sm text-zinc-600">vs</span>
-            )}
-          </div>
-
-          <div className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-              {awayCode ? (
-                <img
-                  src={`https://flagcdn.com/${awayCode.toLowerCase()}.svg`}
-                  alt={fixture?.awayTeam ?? ""}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-xl font-bold text-zinc-400">
-                  {fixture?.awayTeam?.charAt(0) ?? "?"}
-                </span>
-              )}
-            </div>
-            <span className="text-sm font-medium text-zinc-200">
-              {fixture?.awayTeam ?? "Away"}
-            </span>
-            {snap && (
-              <span className="text-4xl font-bold tracking-tight">
-                {snap.away_score}
-              </span>
-            )}
-          </div>
-        </div>
+        <LiveScoreBanner
+          fixtureId={Number(fixtureId)}
+          homeTeam={fixture?.homeTeam ?? ""}
+          awayTeam={fixture?.awayTeam ?? ""}
+          initialHomeScore={liveScore?.homeScore}
+          initialAwayScore={liveScore?.awayScore}
+          isLive={isLive}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Match board */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           {/* Stats panel */}
-          {snap?.stats && Object.keys(snap.stats).length > 0 && (
+          {liveScore && (
             <GlassCard className="p-4" hover={false}>
               <span className="section-header mb-3 block">Match Stats</span>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {Object.entries(snap.stats).map(([key, val]) => (
-                  <div
-                    key={key}
-                    className="rounded-lg bg-white/5 px-3 py-2"
-                  >
-                    <div className="text-[10px] font-mono text-zinc-600">
-                      key {key}
-                    </div>
+                <div className="rounded-lg bg-white/5 px-3 py-2">
+                  <div className="text-[10px] font-mono text-zinc-600">Score</div>
+                  <div className="text-sm font-mono font-medium text-zinc-200">
+                    {liveScore.homeScore} - {liveScore.awayScore}
+                  </div>
+                </div>
+                {liveScore.period && (
+                  <div className="rounded-lg bg-white/5 px-3 py-2">
+                    <div className="text-[10px] font-mono text-zinc-600">Minute</div>
                     <div className="text-sm font-mono font-medium text-zinc-200">
-                      {val}
+                      {liveScore.period}
                     </div>
                   </div>
-                ))}
+                )}
+                <div className="rounded-lg bg-white/5 px-3 py-2">
+                  <div className="text-[10px] font-mono text-zinc-600">Status</div>
+                  <div className="text-sm font-mono font-medium text-zinc-200">
+                    {liveScore.status}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-white/5 px-3 py-2">
+                  <div className="text-[10px] font-mono text-zinc-600">Seq</div>
+                  <div className="text-sm font-mono font-medium text-zinc-200">
+                    {liveScore.seq}
+                  </div>
+                </div>
               </div>
             </GlassCard>
           )}
@@ -257,20 +196,20 @@ export default function FixtureDetailPage() {
                 <span className="text-zinc-600">Fixture ID</span>
                 <div className="font-mono text-zinc-300">{fixtureId}</div>
               </div>
-              {snap && (
+              {liveScore && (
                 <>
                   <div>
                     <span className="text-zinc-600">Sequence</span>
-                    <div className="font-mono text-zinc-300">{snap.seq}</div>
+                    <div className="font-mono text-zinc-300">{liveScore.seq}</div>
                   </div>
                   <div>
                     <span className="text-zinc-600">Status</span>
-                    <div className="font-mono text-zinc-300">{snap.status}</div>
+                    <div className="font-mono text-zinc-300">{liveScore.status}</div>
                   </div>
                   <div>
-                    <span className="text-zinc-600">Last Update</span>
+                    <span className="text-zinc-600">Period</span>
                     <div className="font-mono text-zinc-300">
-                      {new Date(snap.timestamp).toLocaleTimeString()}
+                      {liveScore.period ?? "—"}
                     </div>
                   </div>
                 </>

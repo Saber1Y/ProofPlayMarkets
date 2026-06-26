@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import { Sora } from "next/font/google";
 import { PrivyProvider } from "@/components/PrivyProvider";
 import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
+
+const sora = Sora({
+  subsets: ["latin"],
+  variable: "--font-sora",
+});
 
 export const metadata: Metadata = {
   title: "ProofPlay World Cup",
@@ -12,8 +18,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">
+    <html lang="en" className={sora.variable}>
+      <body className="antialiased" style={{ fontFamily: "var(--font-sora), sans-serif" }}>
         <PrivyProvider>
           <AppShell>{children}</AppShell>
         </PrivyProvider>

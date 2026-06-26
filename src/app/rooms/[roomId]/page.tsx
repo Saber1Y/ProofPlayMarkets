@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
+import { Transaction } from "@solana/web3.js";
+import bs58 from "bs58";
 import Link from "next/link";
 import { teamCode } from "@/lib/teams";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -17,6 +20,14 @@ interface Participant {
   side: string;
   amount: number;
   claimed: boolean;
+}
+
+interface ActivityLogEntry {
+  id: string;
+  type: string;
+  wallet?: string;
+  message: string;
+  timestamp: string;
 }
 
 interface SettlementReceipt {
@@ -41,16 +52,21 @@ interface Room {
   createdAt: string;
   winnerSide?: string;
   settlementReceipt?: SettlementReceipt;
+  activityLog: ActivityLogEntry[];
   marketPda?: string;
   initializeTx?: string;
   lockTx?: string;
   settleTx?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
 }
 
 export default function RoomDetailPage() {
   const params = useParams();
   const roomId = params.roomId as string;
   const { ready, user } = usePrivy();
+  const { wallets } = useWallets();
+  const { signAndSendTransaction } = useSignAndSendTransaction();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,13 +75,24 @@ export default function RoomDetailPage() {
   const [amount, setAmount] = useState("1");
   const [joining, setJoining] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [claiming, setClaiming] = useState(false);
 
   const wallet = user?.wallet?.address ?? "";
   const isCreator = room?.createdBy?.toLowerCase() === wallet.toLowerCase();
   const isOverUnder = room?.marketType === "TOTAL_GOALS_OVER_UNDER";
-  const isLive = room?.status === "LIVE";
-  const isSettled = room?.status === "SETTLED";
   const isOpen = room?.status === "OPEN";
+  const isLocked = room?.status === "LOCKED";
+  const isLive = room?.status === "LIVE";
+  const isAwaitingProof = room?.status === "AWAITING_PROOF";
+  const isSettled = room?.status === "SETTLED" || room?.status === "CLAIMABLE";
+  const isClaimable = room?.status === "CLAIMABLE";
+  const isCancelled = room?.status === "CANCELLED";
+
+  const myParticipant = room?.participants.find(
+    (p) => p.wallet.toLowerCase() === wallet.toLowerCase()
+  );
+  const iWon = myParticipant && myParticipant.side === room?.winnerSide;
+  const alreadyClaimed = myParticipant?.claimed;
 
   const homeCode = teamCode(room?.homeTeam ?? "");
   const awayCode = teamCode(room?.awayTeam ?? "");
@@ -95,17 +122,43 @@ export default function RoomDetailPage() {
   async function handleJoin() {
     if (!wallet || !selectedSide) return;
     setJoining(true);
+    setError(null);
     try {
+      // Step 1: Build unsigned transaction
       const res = await fetch(`/api/rooms/${roomId}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet, side: selectedSide, amount: Number(amount) }),
       });
       const data = await res.json();
-      if (data.error) setError(data.error);
-      else setRoom(data);
-    } catch {
-      setError("Failed to join");
+      if (data.error) { setError(data.error); return; }
+
+      const { tx: txBase64, participantId } = data;
+
+      // Step 2: Sign and send with Privy wallet
+      const solWallet = wallets.find((w) => w.address === wallet);
+      if (!solWallet) { setError("Solana wallet not found"); return; }
+
+      const tx = Transaction.from(Buffer.from(txBase64, "base64"));
+      const { signature } = await signAndSendTransaction({
+        transaction: tx.serialize(),
+        wallet: solWallet,
+        chain: "solana:devnet",
+      });
+      const txSig = bs58.encode(signature);
+
+      // Step 3: Confirm on server
+      const confirmRes = await fetch(`/api/rooms/${roomId}/join/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantId, txSig }),
+      });
+      const confirmData = await confirmRes.json();
+      if (confirmData.error) { setError(confirmData.error); return; }
+
+      setRoom(confirmData);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to join");
     } finally {
       setJoining(false);
     }
@@ -123,6 +176,43 @@ export default function RoomDetailPage() {
       setError("Failed to settle");
     } finally {
       setSettling(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!confirm("Cancel this room? All entries will be refundable.")) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Match was cancelled or postponed" }),
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else setRoom(data);
+    } catch {
+      setError("Failed to cancel");
+    }
+  }
+
+  async function handleClaim() {
+    if (!wallet) return;
+    setClaiming(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet }),
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else setRoom(data);
+    } catch {
+      setError("Failed to claim");
+    } finally {
+      setClaiming(false);
     }
   }
 
@@ -196,7 +286,7 @@ export default function RoomDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isLive && <TxLineBadge status="active" />}
+            {(isLive || isAwaitingProof) && <TxLineBadge status="active" />}
             <StatusPill status={room.status.toLowerCase() as any} />
           </div>
         </div>
@@ -208,7 +298,7 @@ export default function RoomDetailPage() {
             </span>
             {isOverUnder && (
               <span className="ml-3 text-zinc-600">
-                Threshold: <span className="font-mono text-zinc-300">{room.threshold}</span>
+                Threshold: <span className="font-mono text-zinc-300">{room.threshold}+</span>
               </span>
             )}
           </div>
@@ -226,8 +316,35 @@ export default function RoomDetailPage() {
             <ThresholdMeter current={totalGoals ?? 0} threshold={room.threshold} />
           )}
 
+          {/* Awaiting proof */}
+          {isAwaitingProof && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">Awaiting Proof</span>
+              <div className="flex items-center justify-center py-4">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-cyan-accent border-t-transparent" />
+                  <p className="text-sm text-zinc-400">Match finished. Fetching TxLINE validation proof...</p>
+                  <p className="mt-1 text-xs text-zinc-600">Anyone can trigger settlement once proof is ready</p>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Cancelled */}
+          {isCancelled && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block text-amber-400">Room Cancelled</span>
+              <div className="flex items-center justify-center py-3">
+                <div className="text-center">
+                  <p className="text-sm text-zinc-400">{room.cancelReason ?? "Match did not produce a valid result"}</p>
+                  <p className="mt-1 text-xs text-zinc-600">All entries are refundable.</p>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
           {/* Settlement outcome */}
-          {isSettled && room.settlementReceipt && (
+          {(isSettled || isClaimable) && room.settlementReceipt && (
             <GlassCard className="p-5" hover={false}>
               <span className="section-header mb-3 block">Outcome</span>
               <div className="flex items-center justify-center gap-6 py-3">
@@ -301,6 +418,7 @@ export default function RoomDetailPage() {
               <div className="flex flex-col gap-1">
                 {room.participants.map((p) => {
                   const isYes = p.side === "OVER" || p.side === "HOME";
+                  const isWinner = isClaimable && p.side === room.winnerSide;
                   return (
                     <div
                       key={p.id}
@@ -311,6 +429,9 @@ export default function RoomDetailPage() {
                         <span className="text-xs font-mono text-zinc-400">
                           {p.wallet.slice(0, 6)}...{p.wallet.slice(-4)}
                         </span>
+                        {isWinner && p.claimed && (
+                          <span className="text-[10px] text-green-accent/60">Claimed</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-mono ${isYes ? "text-green-accent" : "text-red-400"}`}>
@@ -327,6 +448,26 @@ export default function RoomDetailPage() {
             </GlassCard>
           )}
         </div>
+
+          {/* Activity log */}
+          {room.activityLog.length > 0 && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">Activity Log</span>
+              <div className="flex flex-col gap-2">
+                {room.activityLog.map((log) => (
+                  <div key={log.id} className="flex items-start gap-2 text-xs">
+                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-600" />
+                    <div>
+                      <span className="text-zinc-400">{log.message}</span>
+                      <span className="ml-2 text-[10px] text-zinc-700">
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
 
         {/* Right column: Join + Actions */}
         <div className="flex flex-col gap-4">
@@ -434,7 +575,7 @@ export default function RoomDetailPage() {
             </div>
           </GlassCard>
 
-          {/* Admin actions */}
+          {/* Lock button (creator only) */}
           {isOpen && isCreator && (
             <button
               onClick={async () => {
@@ -447,16 +588,57 @@ export default function RoomDetailPage() {
               Lock Room (Kickoff)
             </button>
           )}
-          {room.status === "LOCKED" && isCreator && (
+
+          {/* Settle — anyone can trigger */}
+          {(isLocked || isAwaitingProof) && (
             <button
               onClick={handleSettle}
               disabled={settling}
               className="w-full rounded-xl bg-green-accent px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
             >
-              {settling ? "Settling..." : "Settle Room"}
+              {settling ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
+                  Settling...
+                </span>
+              ) : isAwaitingProof ? (
+                "Retry Proof Fetch & Settle"
+              ) : (
+                "Settle Room"
+              )}
             </button>
           )}
-          {isSettled && (
+
+          {/* Claim — winners only */}
+          {isClaimable && iWon && !alreadyClaimed && (
+            <button
+              onClick={handleClaim}
+              disabled={claiming}
+              className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-amber-500/90 disabled:opacity-50"
+            >
+              {claiming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
+                  Claiming...
+                </span>
+              ) : (
+                "Claim Reward"
+              )}
+            </button>
+          )}
+
+          {/* Cancel — creator or anyone (permissionless for fairness) */}
+          {(isOpen || isLocked || isAwaitingProof) && (
+            <button
+              onClick={handleCancel}
+              className="w-full rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              Cancel Room (Refund All)
+            </button>
+          )}
+
+          {/* Receipt link */}
+          {(isSettled || isClaimable) && (
             <Link
               href={`/rooms/${room.id}/receipt`}
               className="flex items-center justify-center gap-1.5 rounded-xl border border-cyan-accent/30 bg-cyan-accent/10 px-4 py-2.5 text-xs font-medium text-cyan-accent transition-colors hover:bg-cyan-accent/20"

@@ -3,6 +3,7 @@ import type {
   TxLINEFixtureRaw,
   TxLINEFixture,
   TxLINEScoreSnapshot,
+  TxLINERawEvent,
   TxLINEStatValidationRequest,
   TxLINEStatValidationResponse,
   TxLINEStreamMessage,
@@ -75,8 +76,65 @@ export async function getFixtureById(fixtureId: number): Promise<TxLINEFixture |
   return fixtures.find((f) => f.id === fixtureId) ?? null;
 }
 
-export async function getScoreSnapshot(fixtureId: number): Promise<TxLINEScoreSnapshot> {
-  return fetchJSON<TxLINEScoreSnapshot>(`/api/scores/snapshot/${fixtureId}`);
+export function parseLatestScore(raw: TxLINERawEvent[]): TxLINEScoreSnapshot | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const sorted = [...raw].sort((a, b) => b.Seq - a.Seq);
+
+  const finishedEvent = sorted.find((e) => e.StatusId === 5);
+  const status = finishedEvent
+    ? "finished"
+    : snapshotStatus(sorted[0].StatusId, sorted[0].GameState);
+  const statusSeq = finishedEvent?.Seq ?? sorted[0].Seq;
+
+  const scoreEvent = sorted.find((event) => {
+    const score = event.Score;
+    const g1 = score?.Participant1?.Total?.Goals;
+    const g2 = score?.Participant2?.Total?.Goals;
+    return g1 !== undefined && g2 !== undefined;
+  });
+
+  if (scoreEvent) {
+    const score = scoreEvent.Score!;
+    const clock = scoreEvent.Clock;
+    const seconds = clock?.Seconds ?? 0;
+    return {
+      fixture_id: scoreEvent.FixtureId,
+      seq: statusSeq,
+      status,
+      home_score: score.Participant1?.Total?.Goals ?? 0,
+      away_score: score.Participant2?.Total?.Goals ?? 0,
+      period: `${Math.floor(seconds / 60)}'`,
+    };
+  }
+
+  return {
+    fixture_id: sorted[0].FixtureId,
+    seq: statusSeq,
+    status,
+    home_score: 0,
+    away_score: 0,
+    period: "0'",
+  };
+}
+
+export function snapshotStatus(
+  statusId?: number,
+  gameState?: string
+): string {
+  if (statusId === 5) return "finished";
+  if (statusId === 4) return "in_progress";
+  if (statusId === 3) return "in_progress";
+  if (statusId === 2) return "in_progress";
+  if (statusId === 1) return "scheduled";
+  if (gameState === "finished" || gameState === "closed") return "finished";
+  if (gameState === "started" || gameState === "in_progress") return "in_progress";
+  return "scheduled";
+}
+
+export async function getScoreSnapshot(fixtureId: number): Promise<TxLINEScoreSnapshot | null> {
+  const raw = await fetchJSON<TxLINERawEvent[]>(`/api/scores/snapshot/${fixtureId}`);
+  return parseLatestScore(raw);
 }
 
 export async function getScoreUpdates(fixtureId: number): Promise<TxLINEScoreSnapshot[]> {

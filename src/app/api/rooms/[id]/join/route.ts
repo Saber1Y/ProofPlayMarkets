@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
 import { getRoom, addParticipant } from "@/lib/rooms/store";
+import { getServerSDK } from "@/lib/solana/server";
 
 export async function POST(
   req: NextRequest,
@@ -20,18 +22,30 @@ export async function POST(
     if (!wallet || !side || !amount) {
       return NextResponse.json({ error: "wallet, side, and amount required" }, { status: 400 });
     }
-    const participant = {
-      id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      wallet,
+
+    // Build unsigned transaction for the user to sign
+    const sdk = getServerSDK();
+    const tx = await sdk.buildJoinTransaction(
+      room.fixtureId,
+      new PublicKey(wallet),
       side,
       amount,
-    };
+    );
+
+    // Create pending participant record
+    const participantId = `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const participant = { id: participantId, wallet, side, amount };
     const updated = addParticipant(id, participant);
     if (!updated) {
-      return NextResponse.json({ error: "Failed to join room" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create participant" }, { status: 500 });
     }
-    return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+
+    return NextResponse.json({
+      tx: Buffer.from(tx.serialize({ verifySignatures: false })).toString("base64"),
+      participantId,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Invalid request";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

@@ -27,12 +27,7 @@ interface Receipt {
   marketType: string;
   threshold: number;
   finalScore: { home: number; away: number };
-  statKeysUsed: number[];
   txlineSeq: number;
-  txlineTimestamp: string;
-  merkleRootPda: string;
-  validationEndpoint: string;
-  validationResult: boolean;
   settlementTx?: string;
   winnerSide: string;
   payoutSummary: PayoutSummary[];
@@ -164,9 +159,9 @@ export default function ReceiptPage() {
             </div>
           </div>
           <div className="p-4 text-center">
-            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-600">Validation</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-600">Total Goals</div>
             <div className="mt-1 text-sm font-semibold text-cyan-accent">
-              {receipt.validationResult ? "Passed" : "Failed"}
+              {receipt.finalScore.home + receipt.finalScore.away}
             </div>
           </div>
         </div>
@@ -177,9 +172,9 @@ export default function ReceiptPage() {
         <span className="section-header mb-4 block">Verification Trail</span>
         <div className="flex items-center gap-3">
           {[
-            { label: "TxLINE Feed", status: "completed", step: 1 },
-            { label: "Merkle Proof", status: "completed", step: 2 },
-            { label: "Solana Check", status: receipt.settlementTx ? "completed" : "active", step: 3 },
+            { label: "TxLINE Score", status: "completed", step: 1 },
+            { label: "Winner Rule", status: "completed", step: 2 },
+            { label: "Solana Settlement", status: receipt.settlementTx ? "completed" : "active", step: 3 },
           ].map((v, i) => (
             <>
               <div
@@ -225,11 +220,7 @@ export default function ReceiptPage() {
             <div className="mt-0.5 font-mono text-zinc-300">{receipt.fixtureId}</div>
           </div>
           <div>
-            <span className="text-zinc-600">Stat Keys</span>
-            <div className="mt-0.5 font-mono text-zinc-300">{receipt.statKeysUsed.join(", ")}</div>
-          </div>
-          <div>
-            <span className="text-zinc-600">Predicate</span>
+            <span className="text-zinc-600">Rule</span>
             <div className="mt-0.5 font-mono text-zinc-300">
               {isOverUnder ? `total_goals > ${receipt.threshold}` : "winner"}
             </div>
@@ -238,10 +229,10 @@ export default function ReceiptPage() {
             <span className="text-zinc-600">TxLINE Sequence</span>
             <div className="mt-0.5 font-mono text-zinc-300">{receipt.txlineSeq}</div>
           </div>
-          <div className="col-span-2">
-            <span className="text-zinc-600">Merkle Root</span>
-            <div className="mt-0.5 truncate font-mono text-xs text-zinc-300">
-              {receipt.merkleRootPda}
+          <div>
+            <span className="text-zinc-600">Final Score</span>
+            <div className="mt-0.5 font-mono text-zinc-300">
+              {receipt.finalScore.home} - {receipt.finalScore.away}
             </div>
           </div>
           {receipt.settlementTx && (
@@ -259,18 +250,6 @@ export default function ReceiptPage() {
               </div>
             </div>
           )}
-          <div className="col-span-2">
-            <span className="text-zinc-600">Validation Endpoint</span>
-            <div className="mt-0.5 truncate font-mono text-xs text-zinc-500">
-              {receipt.validationEndpoint}
-            </div>
-          </div>
-          <div className="col-span-2">
-            <span className="text-zinc-600">Validation Timestamp</span>
-            <div className="mt-0.5 font-mono text-zinc-300">
-              {new Date(receipt.txlineTimestamp).toLocaleString()}
-            </div>
-          </div>
         </div>
       </GlassCard>
 

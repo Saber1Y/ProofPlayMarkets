@@ -44,15 +44,10 @@ export interface SettlementReceipt {
   marketType: MarketType;
   threshold: number;
   finalScore: { home: number; away: number };
-  statKeysUsed: number[];
   txlineSeq: number;
-  txlineTimestamp: string;
-  merkleRootPda: string;
-  validationEndpoint: string;
-  validationResult: boolean;
-  settlementTx?: string;
   winnerSide: Side;
   payoutSummary: { participant: string; amount: number }[];
+  settlementTx?: string;
 }
 
 export interface Room {

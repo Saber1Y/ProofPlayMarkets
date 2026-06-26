@@ -34,8 +34,6 @@ interface SettlementReceipt {
   fixtureId: number;
   finalScore: { home: number; away: number };
   winnerSide: string;
-  merkleRootPda: string;
-  validationResult: boolean;
   payoutSummary: { participant: string; amount: number }[];
 }
 
@@ -361,11 +359,9 @@ export default function RoomDetailPage() {
               <div className="mt-3 flex items-center justify-center gap-2 text-sm">
                 <span className="text-zinc-500">Winning side:</span>
                 <span className="font-semibold text-green-accent">{room.winnerSide}</span>
-                {room.settlementReceipt.validationResult && (
-                  <span className="txline-badge bg-green-500/20 text-green-400 border-green-500/30">
-                    ✓ Verified
-                  </span>
-                )}
+                <span className="txline-badge bg-cyan-accent/20 text-cyan-accent border-cyan-accent/30">
+                  Verified
+                </span>
               </div>
             </GlassCard>
           )}

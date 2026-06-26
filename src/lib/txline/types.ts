@@ -36,8 +36,6 @@ export interface TxLINEScoreSnapshot {
   status: string;
   home_score: number;
   away_score: number;
-  stats: Record<string, number>;
-  timestamp: string;
   period?: string;
 }
 
@@ -61,6 +59,26 @@ export interface TxLINEStatValidationResponse {
   merkle_root: string;
   proof: string[];
   timestamp: string;
+}
+
+/** Raw event from TxLINE score snapshot/stream (PascalCase) */
+export interface TxLINERawEvent {
+  FixtureId: number;
+  Seq: number;
+  StatusId?: number;
+  GameState?: string;
+  Clock?: { Running?: boolean; Seconds?: number };
+  Score?: {
+    Participant1?: { Total?: Record<string, number> };
+    Participant2?: { Total?: Record<string, number> };
+  };
+  Stats?: Record<string, number>;
+  Action?: string;
+}
+
+export interface TxLINEStreamMessage {
+  type: "score" | "odds" | "status";
+  data: TxLINEScoreEvent;
 }
 
 export interface TxLINEScoreEvent {

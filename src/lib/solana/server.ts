@@ -1,9 +1,9 @@
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, Transaction, SystemProgram } from "@solana/web3.js";
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import fs from "fs";
 import path from "path";
 import { PREDICTION_MARKET_IDL } from "./idl";
-import { PROGRAM_ID, DEVNET_RPC } from "./constants";
+import { PROGRAM_ID, DEVNET_RPC, participantPda } from "./constants";
 
 let _sdk: PredictionMarketServerSDK | null = null;
 
@@ -74,6 +74,27 @@ export class PredictionMarketServerSDK {
       })
       .accounts({ creator: this.adminWallet, market })
       .rpc();
+  }
+
+  async buildJoinTransaction(
+    fixtureId: number,
+    participantWallet: PublicKey,
+    side: string,
+    amount: number,
+  ): Promise<Transaction> {
+    const [market] = this.marketPda(fixtureId);
+    const [participant] = participantPda(PROGRAM_ID, market, participantWallet);
+
+    const ix = this.program.instruction.joinMarket(
+      { side: this.toEnum(side), amount: new BN(amount) },
+      { accounts: { participantWallet, market, participant, systemProgram: SystemProgram.programId } },
+    );
+
+    const tx = new Transaction().add(ix);
+    tx.feePayer = participantWallet;
+    const { blockhash } = await this.connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    return tx;
   }
 
   async fetchMarket(fixtureId: number) {

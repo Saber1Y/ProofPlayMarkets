@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
-import { Transaction } from "@solana/web3.js";
+import { useWallets } from "@privy-io/react-auth/solana";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import Link from "next/link";
 import { teamCode } from "@/lib/teams";
@@ -64,7 +64,6 @@ export default function RoomDetailPage() {
   const roomId = params.roomId as string;
   const { ready, user } = usePrivy();
   const { wallets } = useWallets();
-  const { signAndSendTransaction } = useSignAndSendTransaction();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,17 +132,18 @@ export default function RoomDetailPage() {
 
       const { tx: txBase64, participantId } = data;
 
-      // Step 2: Sign and send with Privy wallet
+      // Step 2: Sign and send with wallet (triggers native wallet prompt)
       const solWallet = wallets.find((w) => w.address === wallet);
       if (!solWallet) { setError("Solana wallet not found"); return; }
 
       const tx = Transaction.from(Buffer.from(txBase64, "base64"));
-      const { signature } = await signAndSendTransaction({
-        transaction: tx.serialize(),
-        wallet: solWallet,
+      tx.feePayer = new PublicKey(wallet);
+
+      const { signature: txSigBytes } = await solWallet.signAndSendTransaction({
+        transaction: tx.serialize({ verifySignatures: false }),
         chain: "solana:devnet",
       });
-      const txSig = bs58.encode(signature);
+      const txSig = bs58.encode(txSigBytes);
 
       // Step 3: Confirm on server
       const confirmRes = await fetch(`/api/rooms/${roomId}/join/confirm`, {
@@ -467,8 +467,19 @@ export default function RoomDetailPage() {
 
         {/* Right column: Join + Actions */}
         <div className="flex flex-col gap-4">
-          {/* Join (if open) */}
-          {isOpen && (
+          {/* Already joined info */}
+          {isOpen && myParticipant && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">You've Joined</span>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-zinc-400">Side: <span className="font-mono text-zinc-300">{myParticipant.side}</span></span>
+                <span className="text-zinc-400">Entries: <span className="font-mono text-zinc-300">{myParticipant.amount}</span></span>
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Join (if open and not already joined) */}
+          {isOpen && !myParticipant && (
             <GlassCard className="p-5" hover={false}>
               <span className="section-header mb-3 block">Join Room</span>
 

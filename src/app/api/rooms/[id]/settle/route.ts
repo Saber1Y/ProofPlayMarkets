@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getRoom, setAwaitingProof, settleRoom } from "@/lib/rooms/store";
 import { ensureTxLINEInit } from "@/lib/txline/server-init";
 import { getScoreSnapshot } from "@/lib/txline/client";
@@ -6,7 +6,7 @@ import { getServerSDK } from "@/lib/solana/server";
 import type { Side, SettlementReceipt } from "@/lib/rooms/types";
 
 export async function POST(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -16,6 +16,13 @@ export async function POST(
   }
   if (room.status !== "LOCKED" && room.status !== "AWAITING_PROOF") {
     return NextResponse.json({ error: "Room must be LOCKED before settling" }, { status: 400 });
+  }
+
+  // Only the creator can settle
+  const body = await req.json().catch(() => ({}));
+  const wallet = (body as { wallet?: string }).wallet;
+  if (!wallet || wallet.toLowerCase() !== room.createdBy.toLowerCase()) {
+    return NextResponse.json({ error: "Only the room creator can settle" }, { status: 403 });
   }
 
   try {

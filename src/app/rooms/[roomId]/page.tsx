@@ -163,10 +163,15 @@ export default function RoomDetailPage() {
   }
 
   async function handleSettle() {
+    if (!wallet) return;
     setSettling(true);
     setError(null);
     try {
-      const res = await fetch(`/api/rooms/${roomId}/settle`, { method: "POST" });
+      const res = await fetch(`/api/rooms/${roomId}/settle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet }),
+      });
       const data = await res.json();
       if (data.error) setError(data.error);
       else setRoom(data);
@@ -620,8 +625,8 @@ export default function RoomDetailPage() {
             </button>
           )}
 
-          {/* Settle — anyone can trigger */}
-          {(isLocked || isAwaitingProof) && (
+          {/* Settle — creator only */}
+          {(isLocked || isAwaitingProof) && isCreator && (
             <button
               onClick={handleSettle}
               disabled={settling}

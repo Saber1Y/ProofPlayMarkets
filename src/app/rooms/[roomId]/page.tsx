@@ -199,16 +199,40 @@ export default function RoomDetailPage() {
     setClaiming(true);
     setError(null);
     try {
+      // Phase 1: Build unsigned claim tx
       const res = await fetch(`/api/rooms/${roomId}/claim`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet }),
       });
       const data = await res.json();
-      if (data.error) setError(data.error);
-      else setRoom(data);
-    } catch {
-      setError("Failed to claim");
+      if (data.error) { setError(data.error); return; }
+
+      // Phase 2: Sign and send with wallet
+      const solWallet = wallets.find((w) => w.address === wallet);
+      if (!solWallet) { setError("Solana wallet not found"); return; }
+
+      const tx = Transaction.from(Buffer.from(data.tx, "base64"));
+      tx.feePayer = new PublicKey(wallet);
+
+      const { signature: txSigBytes } = await solWallet.signAndSendTransaction({
+        transaction: tx.serialize({ verifySignatures: false }),
+        chain: "solana:devnet",
+      });
+      const txSig = bs58.encode(txSigBytes);
+
+      // Phase 3: Confirm on server
+      const confirmRes = await fetch(`/api/rooms/${roomId}/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet, txSig }),
+      });
+      const confirmData = await confirmRes.json();
+      if (confirmData.error) { setError(confirmData.error); return; }
+
+      setRoom(confirmData);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to claim");
     } finally {
       setClaiming(false);
     }

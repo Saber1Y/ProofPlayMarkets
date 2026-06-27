@@ -3,6 +3,9 @@ import { createRoom, listRooms } from "@/lib/rooms/store";
 import { getServerSDK } from "@/lib/solana/server";
 import { Connection } from "@solana/web3.js";
 import { DEVNET_RPC } from "@/lib/solana/constants";
+import { getFixtureById } from "@/lib/txline/client";
+import { ensureTxLINEInit } from "@/lib/txline/server-init";
+import { canCreateRoom } from "@/lib/txline/status";
 
 export async function GET() {
   const rooms = listRooms();
@@ -15,6 +18,21 @@ export async function POST(req: NextRequest) {
     const { fixtureId, homeTeam, awayTeam, marketType, threshold, wallet } = body;
     if (!fixtureId || !homeTeam || !awayTeam || !marketType || threshold === undefined || !wallet) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Verify the match is upcoming
+    ensureTxLINEInit();
+    const fixture = await getFixtureById(Number(fixtureId));
+    if (!fixture) {
+      return NextResponse.json({ error: "Fixture not found" }, { status: 404 });
+    }
+    if (!canCreateRoom(fixture.startDate)) {
+      const status = fixture.status;
+      return NextResponse.json({
+        error: status === "finished"
+          ? `Cannot create a room for ${homeTeam} vs ${awayTeam} — this match has already ended. Rooms can only be created before kickoff.`
+          : `Cannot create a room for ${homeTeam} vs ${awayTeam} — this match is already in progress. Rooms can only be created before kickoff.`,
+      }, { status: 400 });
     }
 
     const sdk = getServerSDK();

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { getRoom, addParticipant } from "@/lib/rooms/store";
 import { getServerSDK } from "@/lib/solana/server";
+import { getFixtureById } from "@/lib/txline/client";
+import { ensureTxLINEInit } from "@/lib/txline/server-init";
+import { canJoinRoom } from "@/lib/txline/status";
 
 export async function POST(
   req: NextRequest,
@@ -14,6 +17,15 @@ export async function POST(
   }
   if (room.status !== "OPEN") {
     return NextResponse.json({ error: "Room is not open" }, { status: 400 });
+  }
+
+  // Verify the match is still joinable (upcoming only for MVP)
+  ensureTxLINEInit();
+  const fixture = await getFixtureById(room.fixtureId);
+  if (!fixture || !canJoinRoom(fixture.startDate)) {
+    return NextResponse.json({
+      error: "This match has already started. Joining is only allowed before kickoff.",
+    }, { status: 400 });
   }
 
   try {

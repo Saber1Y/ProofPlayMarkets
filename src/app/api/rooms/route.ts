@@ -20,14 +20,35 @@ export async function POST(req: NextRequest) {
     const sdk = getServerSDK();
     const [marketPda] = sdk.marketPda(fixtureId);
 
-    // Check if market PDA already exists on-chain — if so, re-use it
+    // Check if market PDA already exists on-chain — reconstruct room from on-chain data
     const connection = new Connection(DEVNET_RPC, "confirmed");
     const accountInfo = await connection.getAccountInfo(marketPda);
     if (accountInfo) {
+      const onChain = await sdk.fetchMarket(fixtureId);
+      const onChainFixture = Number(onChain.fixtureId);
+      if (onChainFixture !== fixtureId) {
+        return NextResponse.json({ error: "On-chain fixture ID mismatch" }, { status: 409 });
+      }
+      const onChainMarketType = Object.keys(onChain.marketType)[0] || marketType;
+      const onChainThreshold = Number(onChain.threshold);
+      const statusMap: Record<string, string> = {
+        open: "OPEN",
+        locked: "LOCKED",
+        resolved: "CLAIMABLE",
+      };
+      const reconstructedStatus: string = statusMap[Object.keys(onChain.status)[0]?.toLowerCase()] ?? "OPEN";
       const room = createRoom({
-        fixtureId, homeTeam, awayTeam, marketType, threshold, wallet,
+        fixtureId, homeTeam, awayTeam,
+        marketType: onChainMarketType,
+        threshold: onChainThreshold,
+        wallet,
         marketPda: marketPda.toBase58(),
+        overrideStatus: reconstructedStatus as any,
       });
+      if (onChain.winnerSide) {
+        const winSide = Object.keys(onChain.winnerSide)[0];
+        room.winnerSide = winSide as any;
+      }
       return NextResponse.json(room, { status: 201 });
     }
 

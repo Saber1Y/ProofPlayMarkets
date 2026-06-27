@@ -35,6 +35,7 @@ export function createRoom(data: {
   wallet: string;
   marketPda?: string;
   initializeTx?: string;
+  overrideStatus?: Room["status"];
 }): Room {
   const room: Room = {
     id: generateId(),
@@ -43,7 +44,7 @@ export function createRoom(data: {
     awayTeam: data.awayTeam,
     marketType: data.marketType as Room["marketType"],
     threshold: data.threshold,
-    status: "OPEN",
+    status: data.overrideStatus ?? "OPEN",
     participants: [],
     createdBy: data.wallet,
     createdAt: new Date().toISOString(),

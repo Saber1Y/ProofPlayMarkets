@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { teamCode } from "@/lib/teams";
@@ -98,7 +98,7 @@ function CreateRoomForm() {
       if (room.error) {
         setError(room.error);
       } else {
-        router.push(`/rooms/${room.id}`);
+        window.location.href = `/rooms/${room.id}`;
       }
     } catch {
       setError("Failed to create room");

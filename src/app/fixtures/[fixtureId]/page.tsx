@@ -75,6 +75,8 @@ export default function FixtureDetailPage() {
   const isFinished = liveScore?.status === "finished";
   const hasScore = liveScore !== null && (isLive || isFinished);
 
+  const isUpcoming = fixture?.status === "upcoming" || fixture?.status === "scheduled";
+
   if (loading && !fixture) {
     return (
       <div className="flex flex-col gap-6">
@@ -136,6 +138,11 @@ export default function FixtureDetailPage() {
             {isLive && <TxLineBadge status="active" />}
             {isFinished && <TxLineBadge status="verified" />}
             <StatusPill status={isLive ? "live" : isFinished ? "final" : "upcoming"} />
+            {isUpcoming && (
+              <span className="rounded-md border border-green-accent/20 bg-green-accent/5 px-2 py-0.5 text-[10px] font-medium text-green-accent">
+                Create Room Open
+              </span>
+            )}
           </div>
         </div>
 
@@ -221,32 +228,54 @@ export default function FixtureDetailPage() {
         {/* Create prediction panel */}
         <div className="flex flex-col gap-3">
           <span className="section-header">Start a Room</span>
-          {ROOM_TEMPLATES.map((tpl) => (
-            <Link
-              key={tpl.name}
-              href={`/rooms/create?fixtureId=${fixtureId}&template=${tpl.name}`}
-              className="glass-card group p-4"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-white text-sm">
-                    {tpl.name}
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-500">{tpl.prompt}</p>
-                  <p className="mt-1 text-[10px] text-zinc-600">
-                    TxLINE: {tpl.statKeys}
-                  </p>
+          {isUpcoming ? (
+            ROOM_TEMPLATES.map((tpl) => (
+              <Link
+                key={tpl.name}
+                href={`/rooms/create?fixtureId=${fixtureId}&template=${tpl.name}`}
+                className="glass-card group p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-white text-sm">
+                      {tpl.name}
+                    </h3>
+                    <p className="mt-1 text-xs text-zinc-500">{tpl.prompt}</p>
+                    <p className="mt-1 text-[10px] text-zinc-600">
+                      TxLINE: {tpl.statKeys}
+                    </p>
+                  </div>
+                  <svg
+                    className="h-4 w-4 shrink-0 text-zinc-600 transition-colors group-hover:text-cyan-accent"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                  >
+                    <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </div>
-                <svg
-                  className="h-4 w-4 shrink-0 text-zinc-600 transition-colors group-hover:text-cyan-accent"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                >
-                  <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              </Link>
+            ))
+          ) : isLive ? (
+            <div className="glass-card p-4">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs text-zinc-400">Match is in progress</span>
               </div>
-            </Link>
-          ))}
+              <p className="mt-2 text-xs text-zinc-600">
+                Room creation is disabled while the match is live. View existing rooms under My Rooms.
+              </p>
+            </div>
+          ) : (
+            <div className="glass-card p-4">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="rounded bg-zinc-500/10 px-1.5 py-0.5 text-zinc-500">Final</span>
+                <span className="text-zinc-400">Match has ended</span>
+              </div>
+              <p className="mt-2 text-xs text-zinc-600">
+                Rooms can only be created before kickoff. View settlement receipts for existing rooms under My Rooms.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

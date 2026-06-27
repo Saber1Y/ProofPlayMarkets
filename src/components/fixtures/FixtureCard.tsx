@@ -25,16 +25,16 @@ export function FixtureCard({
   const homeCode = teamCode(fixture.homeTeam);
   const awayCode = teamCode(fixture.awayTeam);
 
-  const isLive = fixture.minute && fixture.status === "live";
-  const isFinal = fixture.status === "finished" || fixture.status === "final";
-  const isUpcoming = !isLive && !isFinal;
+  const isLive = fixture.status === "live";
+  const isFinished = fixture.status === "finished";
+  const isUpcoming = fixture.status === "upcoming" || fixture.status === "scheduled";
 
   const statusBadge = isLive ? (
     <span className="status-pill border border-white/10 text-zinc-300">
       <span className="bg-red-500 animate-pulse rounded-full" />
-      {fixture.minute}&rsquo;
+      {fixture.minute ?? "Live"}
     </span>
-  ) : isFinal ? (
+  ) : isFinished ? (
     <span className="status-pill border border-white/10 text-zinc-500">
       <span className="bg-zinc-500 rounded-full" />
       Final
@@ -50,7 +50,7 @@ export function FixtureCard({
     </span>
   );
 
-  const showScore = isLive || isFinal;
+  const showScore = isLive || isFinished;
 
   if (variant === "hero") {
     return (
@@ -113,7 +113,7 @@ export function FixtureCard({
               {fixture.roomCount ?? 0} prediction rooms
             </span>
             <span className="text-cyan-accent opacity-0 transition-opacity group-hover:opacity-100">
-              Open match →
+              {isUpcoming ? "Start a room →" : isLive ? "View match →" : "View receipts →"}
             </span>
           </div>
         </div>
@@ -163,6 +163,17 @@ export function FixtureCard({
               fixture.awayTeam.charAt(0)
             )}
           </div>
+        </div>
+
+        {/* Status-based action badge */}
+        <div className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-medium ${
+          isUpcoming
+            ? "bg-green-accent/10 text-green-accent"
+            : isLive
+              ? "bg-red-500/10 text-red-400"
+              : "bg-zinc-500/10 text-zinc-500"
+        }`}>
+          {isUpcoming ? "Create Room" : isLive ? "View Match" : "Receipts"}
         </div>
       </div>
     </Link>

@@ -39,8 +39,8 @@ export default function FixturesPage() {
   }, []);
 
   const live = fixtures.filter((f) => f.status === "live");
-  const upcoming = fixtures.filter((f) => f.status === "scheduled" || f.status === "upcoming");
-  const finished = fixtures.filter((f) => f.status === "finished" || f.status === "final");
+  const upcoming = fixtures.filter((f) => f.status === "upcoming" || f.status === "scheduled");
+  const finished = fixtures.filter((f) => f.status === "finished");
 
   const filtered =
     filter === "All"

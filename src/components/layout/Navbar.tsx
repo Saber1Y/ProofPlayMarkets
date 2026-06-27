@@ -16,10 +16,7 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-white/5 bg-pitch/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-green-accent/30 bg-green-accent/10">
-            <span className="text-xs font-bold text-green-accent">PP</span>
-          </div>
+        <Link href="/">
           <span className="text-sm font-bold tracking-tight">
             ProofPlay <span className="text-gradient">World Cup</span>
           </span>
@@ -27,7 +24,8 @@ export function Navbar() {
 
         <div className="flex items-center gap-1">
           {links.map((link) => {
-            const active = pathname === link.href || pathname.startsWith(link.href + "/");
+            const active =
+              pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link
                 key={link.href}

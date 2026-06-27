@@ -20,13 +20,15 @@ export async function POST(req: NextRequest) {
     const sdk = getServerSDK();
     const [marketPda] = sdk.marketPda(fixtureId);
 
-    // Check if market PDA already exists on-chain
+    // Check if market PDA already exists on-chain — if so, re-use it
     const connection = new Connection(DEVNET_RPC, "confirmed");
     const accountInfo = await connection.getAccountInfo(marketPda);
     if (accountInfo) {
-      return NextResponse.json({
-        error: `A market for fixture ${fixtureId} (${homeTeam} vs ${awayTeam}) already exists on-chain. Pick a different fixture — each fixture can only have one market. Look for the existing room under My Rooms.`,
-      }, { status: 409 });
+      const room = createRoom({
+        fixtureId, homeTeam, awayTeam, marketType, threshold, wallet,
+        marketPda: marketPda.toBase58(),
+      });
+      return NextResponse.json(room, { status: 201 });
     }
 
     const txSig = await sdk.initializeMarket(fixtureId, marketType, threshold);

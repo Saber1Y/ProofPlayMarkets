@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
@@ -171,9 +171,8 @@ function CreateRoomForm() {
       {/* Step indicator */}
       <div className="mb-8 flex items-center gap-2">
         {STEPS.map((s, i) => (
-          <>
+          <React.Fragment key={s.num}>
             <div
-              key={s.num}
               className={`flex items-center gap-2 ${
                 s.num === step ? "text-green-accent" : s.num < step ? "text-zinc-400" : "text-zinc-700"
               }`}
@@ -200,9 +199,9 @@ function CreateRoomForm() {
             {i < STEPS.length - 1 && (
               <div className={`h-px flex-1 ${s.num < step ? "bg-green-accent/30" : "bg-white/10"}`} />
             )}
-          </>
-        ))}
-      </div>
+            </React.Fragment>
+          ))}
+        </div>
 
       <div className="flex flex-col gap-5">
         {/* Step 1: Select Match */}

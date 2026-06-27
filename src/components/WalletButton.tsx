@@ -6,23 +6,25 @@ export function WalletButton() {
   const { ready, authenticated, user, login, logout } = usePrivy();
 
   if (!ready) {
-    return (
-      <div className="h-8 w-24 rounded-lg bg-zinc-800 animate-pulse" />
-    );
+    return <div className="h-8 w-24 rounded-lg bg-zinc-800 animate-pulse" />;
   }
 
   const solanaAddr =
     user?.wallet?.address ??
-    (user?.linkedAccounts?.find(
-      (a) =>
-        a.type === "wallet" &&
-        "chainType" in a &&
-        (a as { chainType: string }).chainType === "solana"
-    ) as { address: string } | undefined)?.address;
+    (
+      user?.linkedAccounts?.find(
+        (a) =>
+          a.type === "wallet" &&
+          "chainType" in a &&
+          (a as { chainType: string }).chainType === "solana",
+      ) as { address: string } | undefined
+    )?.address;
 
   if (authenticated && solanaAddr) {
     const addr = solanaAddr;
     const short = `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+
+    // console.log("Authenticated user:", user, addr);
     return (
       <button
         onClick={logout}

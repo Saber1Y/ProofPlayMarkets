@@ -76,6 +76,7 @@ export function useLiveScore(fixtureId: number, initial?: { homeScore: number; a
   }, [fixtureId]);
 
   useEffect(() => {
+    if (fixtureId <= 0) return;
     setScore(null);
     setConnected(false);
     fetch(`/api/txline/scores/${fixtureId}`)

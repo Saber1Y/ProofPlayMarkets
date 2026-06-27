@@ -97,6 +97,25 @@ export class PredictionMarketServerSDK {
     return tx;
   }
 
+  async buildClaimTransaction(
+    fixtureId: number,
+    claimerWallet: PublicKey,
+  ): Promise<Transaction> {
+    const [market] = this.marketPda(fixtureId);
+    const [participant] = participantPda(PROGRAM_ID, market, claimerWallet);
+
+    const ix = await this.program.methods
+      .claimPayout()
+      .accounts({ claimer: claimerWallet, market, participant, systemProgram: SystemProgram.programId })
+      .instruction();
+
+    const tx = new Transaction().add(ix);
+    tx.feePayer = claimerWallet;
+    const { blockhash } = await this.connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    return tx;
+  }
+
   async fetchMarket(fixtureId: number) {
     const [pda] = this.marketPda(fixtureId);
     return this.program.account.market.fetch(pda);

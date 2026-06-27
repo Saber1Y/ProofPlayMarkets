@@ -7,3 +7,4 @@ node_modules/
 out/
 solana/target/
 solana/admin-keypair.json
+.rooms.json

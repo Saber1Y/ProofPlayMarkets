@@ -91,7 +91,7 @@ export function parseLatestScore(raw: TxLINERawEvent[]): TxLINEScoreSnapshot | n
     const score = event.Score;
     const g1 = score?.Participant1?.Total?.Goals;
     const g2 = score?.Participant2?.Total?.Goals;
-    return g1 !== undefined && g2 !== undefined;
+    return g1 !== undefined || g2 !== undefined;
   });
 
   if (scoreEvent) {

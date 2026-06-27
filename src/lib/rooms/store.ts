@@ -114,17 +114,21 @@ export function listRooms(): Room[] {
 export function addParticipant(
   roomId: string,
   participant: { id: string; wallet: string; side: Side; amount: number }
-): Room | null {
+): { room: Room; duplicate: boolean } | null {
   return mutate(() => {
     const room = rooms.get(roomId);
     if (!room || room.status !== "OPEN") return null;
+    const duplicate = room.participants.some(
+      (p) => p.wallet.toLowerCase() === participant.wallet.toLowerCase()
+    );
+    if (duplicate) return { room, duplicate: true };
     room.participants.push({ ...participant, claimed: false });
     addActivityLog(room, {
       type: "USER_JOINED",
       wallet: participant.wallet,
       message: `${participant.wallet.slice(0, 6)}... joined ${participant.side}`,
     });
-    return room;
+    return { room, duplicate: false };
   });
 }
 

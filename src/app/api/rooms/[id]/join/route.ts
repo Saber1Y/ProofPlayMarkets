@@ -44,12 +44,23 @@ export async function POST(
       amount,
     );
 
+    // Check for duplicate wallet
+    const existing = room.participants.find(
+      (p) => p.wallet.toLowerCase() === wallet.toLowerCase()
+    );
+    if (existing) {
+      return NextResponse.json({ error: "You have already joined this room" }, { status: 400 });
+    }
+
     // Create pending participant record
     const participantId = `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const participant = { id: participantId, wallet, side, amount };
-    const updated = addParticipant(id, participant);
-    if (!updated) {
-      return NextResponse.json({ error: "Failed to create participant" }, { status: 500 });
+    const result = addParticipant(id, participant);
+    if (!result) {
+      return NextResponse.json({ error: "Room is no longer open" }, { status: 400 });
+    }
+    if (result.duplicate) {
+      return NextResponse.json({ error: "You have already joined this room" }, { status: 400 });
     }
 
     return NextResponse.json({

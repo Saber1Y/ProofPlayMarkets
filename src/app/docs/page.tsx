@@ -36,6 +36,37 @@ export default function DocsPage() {
 
       <div className="grid gap-4">
         <GlassCard className="p-5" hover={false}>
+          <span className="section-header mb-3 block">Network</span>
+          <div className="flex flex-col gap-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Network</span>
+              <span className="text-zinc-300">Solana Devnet</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Program ID</span>
+              <code className="text-cyan-accent">D254EggCVsZ7jKtJJ29diEv3P4qqjn5APBAvcRwDNsyE</code>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Admin Wallet</span>
+              <code className="text-zinc-300">JE4HHzibqoAmMDsgkmE3mzAKedNB1fwWQUwPmftVnBjj</code>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Faucet</span>
+              <a
+                href="https://faucet.solana.com/"
+                target="_blank"
+                className="text-cyan-accent hover:underline"
+              >
+                faucet.solana.com
+              </a>
+            </div>
+          </div>
+          <p className="mt-3 text-[10px] text-zinc-600">
+            Devnet SOL needed to create rooms (free from faucet). The admin wallet funds market creation. Users need ~0.002 SOL per join for rent + fees.
+          </p>
+        </GlassCard>
+
+        <GlassCard className="p-5" hover={false}>
           <span className="section-header mb-3 block">Documents</span>
           <div className="flex flex-col gap-1">
             {FILES.map((f) => (

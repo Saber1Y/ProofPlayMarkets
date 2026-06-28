@@ -50,7 +50,8 @@ export async function POST(
     }
 
     let winnerSide: Side;
-    if (room.marketType === "TOTAL_GOALS_OVER_UNDER") {
+    const isOverUnder = room.marketType.toUpperCase().replace(/_/g, "") === "TOTALGOALSOVERUNDER";
+    if (isOverUnder) {
       winnerSide = total > room.threshold ? "OVER" : "UNDER";
     } else {
       if (homeScore > awayScore) winnerSide = "HOME";

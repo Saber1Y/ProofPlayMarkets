@@ -70,6 +70,7 @@ export function createRoom(data: {
   awayTeam: string;
   marketType: string;
   threshold: number;
+  entryFee: number;
   wallet: string;
   marketPda?: string;
   initializeTx?: string;
@@ -83,6 +84,7 @@ export function createRoom(data: {
       awayTeam: data.awayTeam,
       marketType: data.marketType as Room["marketType"],
       threshold: data.threshold,
+      entryFee: data.entryFee,
       status: data.overrideStatus ?? "OPEN",
       participants: [],
       createdBy: data.wallet,

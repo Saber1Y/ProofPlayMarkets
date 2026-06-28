@@ -35,15 +35,6 @@ export async function POST(
       return NextResponse.json({ error: "wallet, side, and amount required" }, { status: 400 });
     }
 
-    // Build unsigned transaction for the user to sign
-    const sdk = getServerSDK();
-    const tx = await sdk.buildJoinTransaction(
-      room.fixtureId,
-      new PublicKey(wallet),
-      side,
-      amount,
-    );
-
     // Check for duplicate wallet
     const existing = room.participants.find(
       (p) => p.wallet.toLowerCase() === wallet.toLowerCase()
@@ -51,6 +42,18 @@ export async function POST(
     if (existing) {
       return NextResponse.json({ error: "You have already joined this room" }, { status: 400 });
     }
+
+    // Compute total stake = entryFee * number of entries
+    const totalStake = room.entryFee * amount;
+
+    // Build unsigned transaction for the user to sign
+    const sdk = getServerSDK();
+    const tx = await sdk.buildJoinTransaction(
+      room.fixtureId,
+      new PublicKey(wallet),
+      side,
+      totalStake,
+    );
 
     // Create pending participant record
     const participantId = `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

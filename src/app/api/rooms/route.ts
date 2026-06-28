@@ -15,8 +15,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { fixtureId, homeTeam, awayTeam, marketType, threshold, wallet } = body;
-    if (!fixtureId || !homeTeam || !awayTeam || !marketType || threshold === undefined || !wallet) {
+    const { fixtureId, homeTeam, awayTeam, marketType, threshold, entryFee, wallet } = body;
+    if (!fixtureId || !homeTeam || !awayTeam || !marketType || threshold === undefined || !entryFee || !wallet) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
         fixtureId, homeTeam, awayTeam,
         marketType: onChainMarketType,
         threshold: onChainThreshold,
+        entryFee: entryFee,
         wallet,
         marketPda: marketPda.toBase58(),
         overrideStatus: reconstructedStatus as any,
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
     const txSig = await sdk.initializeMarket(fixtureId, marketType, threshold);
 
     const room = createRoom({
-      fixtureId, homeTeam, awayTeam, marketType, threshold, wallet,
+      fixtureId, homeTeam, awayTeam, marketType, threshold, entryFee, wallet,
       marketPda: marketPda.toBase58(),
       initializeTx: txSig,
     });

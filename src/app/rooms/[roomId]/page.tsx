@@ -44,6 +44,7 @@ interface Room {
   awayTeam: string;
   marketType: string;
   threshold: number;
+  entryFee: number;
   status: string;
   participants: Participant[];
   createdBy: string;
@@ -412,10 +413,10 @@ export default function RoomDetailPage() {
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {yesPool}
+                    {(yesPool * (room.entryFee || 0) / 1e9).toFixed(3)}
                   </div>
-                  <div className="text-xs text-zinc-600">
-                    {room.participants.filter((p) => p.side === "OVER" || p.side === "HOME").length} participants
+                  <div className="text-[10px] text-zinc-600">
+                    SOL · {room.participants.filter((p) => p.side === "OVER" || p.side === "HOME").length} participant{room.participants.filter((p) => p.side === "OVER" || p.side === "HOME").length !== 1 ? "s" : ""}
                   </div>
                 </div>
                 <div className="rounded-xl border border-red-500/20 bg-red-500/[0.03] p-4">
@@ -426,10 +427,10 @@ export default function RoomDetailPage() {
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {noPool}
+                    {(noPool * (room.entryFee || 0) / 1e9).toFixed(3)}
                   </div>
-                  <div className="text-xs text-zinc-600">
-                    {room.participants.filter((p) => p.side === "UNDER" || p.side === "AWAY").length} participants
+                  <div className="text-[10px] text-zinc-600">
+                    SOL · {room.participants.filter((p) => p.side === "UNDER" || p.side === "AWAY").length} participant{room.participants.filter((p) => p.side === "UNDER" || p.side === "AWAY").length !== 1 ? "s" : ""}
                   </div>
                 </div>
               </div>
@@ -463,7 +464,7 @@ export default function RoomDetailPage() {
                           {p.side}
                         </span>
                         <span className="text-xs text-zinc-600">
-                          {p.amount}
+                          {(p.amount * (room.entryFee || 0) / 1e9).toFixed(3)}
                         </span>
                       </div>
                     </div>
@@ -517,7 +518,7 @@ export default function RoomDetailPage() {
               <span className="section-header mb-3 block">You've Joined</span>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-zinc-400">Side: <span className="font-mono text-zinc-300">{myParticipant.side}</span></span>
-                <span className="text-zinc-400">Entries: <span className="font-mono text-zinc-300">{myParticipant.amount}</span></span>
+                <span className="text-zinc-400">Staked: <span className="font-mono text-zinc-300">{(myParticipant.amount * (room.entryFee || 0) / 1e9).toFixed(4)} SOL</span></span>
               </div>
             </GlassCard>
           )}
@@ -576,23 +577,29 @@ export default function RoomDetailPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      min="1"
-                      className="glass-input w-20 px-3 py-2 text-sm text-center"
-                      placeholder="1"
-                    />
-                    <span className="text-xs text-zinc-600">entries</span>
-                    <button
-                      onClick={handleJoin}
-                      disabled={joining || !selectedSide}
-                      className="ml-auto rounded-lg bg-green-accent px-4 py-2 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
-                    >
-                      {joining ? "Joining..." : "Join"}
-                    </button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        min="1"
+                        className="glass-input w-20 px-3 py-2 text-sm text-center"
+                        placeholder="1"
+                      />
+                      <span className="text-xs text-zinc-600">entries</span>
+                      <button
+                        onClick={handleJoin}
+                        disabled={joining || !selectedSide}
+                        className="ml-auto rounded-lg bg-green-accent px-4 py-2 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
+                      >
+                        {joining ? "Joining..." : "Join"}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-zinc-600">
+                      Total: <span className="font-mono text-zinc-400">{(Number(amount) * (room.entryFee || 0) / 1e9).toFixed(4)} SOL</span>
+                      &nbsp;·&nbsp; Winner gets <span className="font-mono text-zinc-400">2x</span>
+                    </p>
                   </div>
                 </div>
               )}

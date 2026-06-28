@@ -73,7 +73,7 @@ export async function POST(
       winnerSide,
       payoutSummary: room.participants
         .filter((p) => p.side === winnerSide)
-        .map((p) => ({ participant: p.wallet, amount: p.amount * 2 })),
+        .map((p) => ({ participant: p.wallet, amount: p.amount * room.entryFee * 2 })),
     };
 
     const settled = settleRoom(id, winnerSide, receipt, settleTx);

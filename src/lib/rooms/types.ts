@@ -57,6 +57,7 @@ export interface Room {
   awayTeam: string;
   marketType: MarketType;
   threshold: number;
+  entryFee: number; // lamports per entry
   status: RoomStatus;
   participants: Participant[];
   createdBy: string;
@@ -79,6 +80,7 @@ export interface CreateRoomRequest {
   marketType: MarketType;
   threshold: number;
   wallet: string;
+  entryFee: number;
 }
 
 export interface JoinRoomRequest {

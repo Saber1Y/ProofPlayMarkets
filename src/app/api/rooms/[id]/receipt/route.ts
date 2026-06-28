@@ -18,6 +18,7 @@ export async function GET(
   }
   return NextResponse.json({
     ...room.settlementReceipt,
+    entryFee: room.entryFee,
     homeTeam: room.homeTeam,
     awayTeam: room.awayTeam,
     participants: room.participants.map((p) => ({

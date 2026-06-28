@@ -62,7 +62,7 @@ interface Room {
 export default function RoomDetailPage() {
   const params = useParams();
   const roomId = params.roomId as string;
-  const { ready, user } = usePrivy();
+  const { ready, user, login } = usePrivy();
   const { wallets } = useWallets();
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -496,6 +496,21 @@ export default function RoomDetailPage() {
 
         {/* Right column: Join + Actions */}
         <div className="flex flex-col gap-4">
+          {/* Wallet guard */}
+          {!wallet && (
+            <GlassCard className="p-5" hover={false}>
+              <span className="section-header mb-3 block">Wallet Required</span>
+              <p className="text-sm text-zinc-500">
+                Connect your wallet to join rooms, settle, claim payouts, and manage predictions.
+              </p>
+              <button
+                onClick={() => login()}
+                className="mt-3 w-full rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors"
+              >
+                Connect Wallet
+              </button>
+            </GlassCard>
+          )}
           {/* Already joined info */}
           {isOpen && myParticipant && (
             <GlassCard className="p-5" hover={false}>
@@ -611,66 +626,70 @@ export default function RoomDetailPage() {
             </div>
           </GlassCard>
 
-          {/* Lock button (creator only) */}
-          {isOpen && isCreator && (
-            <button
-              onClick={async () => {
-                const res = await fetch(`/api/rooms/${roomId}/lock`, { method: "POST" });
-                if (res.ok) setRoom(await res.json());
-                else setError((await res.json()).error);
-              }}
-              className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
-            >
-              Lock Room (Kickoff)
-            </button>
-          )}
-
-          {/* Settle — creator only */}
-          {(isLocked || isAwaitingProof) && isCreator && (
-            <button
-              onClick={handleSettle}
-              disabled={settling}
-              className="w-full rounded-xl bg-green-accent px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
-            >
-              {settling ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
-                  Settling...
-                </span>
-              ) : isAwaitingProof ? (
-                "Retry Proof Fetch & Settle"
-              ) : (
-                "Settle Room"
+          {wallet && (
+            <>
+              {/* Lock button (creator only) */}
+              {isOpen && isCreator && (
+                <button
+                  onClick={async () => {
+                    const res = await fetch(`/api/rooms/${roomId}/lock`, { method: "POST" });
+                    if (res.ok) setRoom(await res.json());
+                    else setError((await res.json()).error);
+                  }}
+                  className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
+                >
+                  Lock Room (Kickoff)
+                </button>
               )}
-            </button>
-          )}
 
-          {/* Claim — winners only */}
-          {isClaimable && iWon && !alreadyClaimed && (
-            <button
-              onClick={handleClaim}
-              disabled={claiming}
-              className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-amber-500/90 disabled:opacity-50"
-            >
-              {claiming ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
-                  Claiming...
-                </span>
-              ) : (
-                "Claim Reward"
+              {/* Settle — creator only */}
+              {(isLocked || isAwaitingProof) && isCreator && (
+                <button
+                  onClick={handleSettle}
+                  disabled={settling}
+                  className="w-full rounded-xl bg-green-accent px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-green-accent/90 disabled:opacity-50"
+                >
+                  {settling ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
+                      Settling...
+                    </span>
+                  ) : isAwaitingProof ? (
+                    "Retry Proof Fetch & Settle"
+                  ) : (
+                    "Settle Room"
+                  )}
+                </button>
               )}
-            </button>
-          )}
 
-          {/* Cancel — creator or anyone (permissionless for fairness) */}
-          {(isOpen || isLocked || isAwaitingProof) && (
-            <button
-              onClick={handleCancel}
-              className="w-full rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-            >
-              Cancel Room (Refund All)
-            </button>
+              {/* Claim — winners only */}
+              {isClaimable && iWon && !alreadyClaimed && (
+                <button
+                  onClick={handleClaim}
+                  disabled={claiming}
+                  className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-pitch transition-all hover:bg-amber-500/90 disabled:opacity-50"
+                >
+                  {claiming ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-pitch border-t-transparent" />
+                      Claiming...
+                    </span>
+                  ) : (
+                    "Claim Reward"
+                  )}
+                </button>
+              )}
+
+              {/* Cancel — creator or anyone (permissionless for fairness) */}
+              {(isOpen || isLocked || isAwaitingProof) && (
+                <button
+                  onClick={handleCancel}
+                  className="w-full rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  Cancel Room (Refund All)
+                </button>
+              )}
+            </>
           )}
 
           {/* Receipt link */}

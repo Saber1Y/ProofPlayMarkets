@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRoom, getPendingJoin, confirmPendingJoin } from "@/lib/rooms/store";
+import { getRoom, addConfirmedParticipant } from "@/lib/rooms/store";
 
 export async function POST(
   req: NextRequest,
@@ -13,16 +13,20 @@ export async function POST(
 
   try {
     const body = await req.json();
-    const { participantId, txSig } = body;
-    if (!participantId || !txSig) {
-      return NextResponse.json({ error: "participantId and txSig required" }, { status: 400 });
+    const { wallet, side, amount, txSig } = body;
+    if (!wallet || !side || !amount || !txSig) {
+      return NextResponse.json({ error: "wallet, side, amount, and txSig required" }, { status: 400 });
     }
 
-    const updated = confirmPendingJoin(id, participantId, txSig);
-    if (!updated) {
-      return NextResponse.json({ error: "Failed to confirm join" }, { status: 500 });
+    const result = addConfirmedParticipant(id, { wallet, side, amount, joinTx: txSig });
+    if (!result) {
+      return NextResponse.json({ error: "Room is no longer open" }, { status: 400 });
     }
-    return NextResponse.json(updated);
+    if (result.duplicate) {
+      return NextResponse.json({ error: "You have already joined this room" }, { status: 400 });
+    }
+
+    return NextResponse.json(result.room);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Invalid request";
     return NextResponse.json({ error: msg }, { status: 400 });

@@ -131,7 +131,7 @@ export default function RoomDetailPage() {
       const data = await res.json();
       if (data.error) { setError(data.error); return; }
 
-      const { tx: txBase64, participantId } = data;
+      const { tx: txBase64 } = data;
 
       // Step 2: Sign and send with wallet (triggers native wallet prompt)
       const solWallet = wallets.find((w) => w.address === wallet);
@@ -146,11 +146,11 @@ export default function RoomDetailPage() {
       });
       const txSig = bs58.encode(txSigBytes);
 
-      // Step 3: Confirm on server
+      // Step 3: Confirm on server — creates participant + stores txSig
       const confirmRes = await fetch(`/api/rooms/${roomId}/join/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participantId, txSig }),
+        body: JSON.stringify({ wallet, side: selectedSide, amount: Number(amount), txSig }),
       });
       const confirmData = await confirmRes.json();
       if (confirmData.error) { setError(confirmData.error); return; }

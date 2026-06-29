@@ -18,6 +18,7 @@ interface Participant {
   side: string;
   amount: number;
   claimed: boolean;
+  joinTx?: string;
 }
 
 interface ActivityLogEntry {
@@ -449,6 +450,17 @@ export default function RoomDetailPage() {
                         <span className="text-xs font-mono text-zinc-400">
                           {p.wallet.slice(0, 6)}...{p.wallet.slice(-4)}
                         </span>
+                        {p.joinTx && (
+                          <a
+                            href={`https://solscan.io/tx/${p.joinTx}?cluster=devnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-1 text-[10px] text-blue-400/60 hover:text-blue-400"
+                            title="View on Solscan"
+                          >
+                            tx
+                          </a>
+                        )}
                         {isWinner && p.claimed && (
                           <span className="text-[10px] text-green-accent/60">Claimed</span>
                         )}

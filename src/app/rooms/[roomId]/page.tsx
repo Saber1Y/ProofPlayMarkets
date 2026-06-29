@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import bs58 from "bs58";
 import Link from "next/link";
 import { teamCode } from "@/lib/teams";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -138,9 +137,11 @@ export default function RoomDetailPage() {
       console.log("[join] signing tx, programIDs:", tx.instructions.map(i => i.programId.toBase58()));
       const provider = (window as any).phantom?.solana || (window as any).solana;
       if (!provider) { setError("Phantom not detected — please install Phantom wallet"); return; }
-      const { signature: txSigBytes } = await provider.signAndSendTransaction(tx);
-      console.log("[join] tx signed:", bs58.encode(txSigBytes).slice(0, 20));
-      const txSig = bs58.encode(txSigBytes);
+      console.log("[join] phantom provider rpcUrl:", provider._rpcUrl || provider.rpcUrl || "unknown");
+      console.log("[join] phantom provider isConnected:", provider.isConnected);
+      console.log("[join] phantom provider publicKey:", provider.publicKey?.toBase58());
+      const { signature: txSig } = await provider.signAndSendTransaction(tx);
+      console.log("[join] tx signed:", txSig.slice(0, 20));
 
       // Step 3: Confirm on server — creates participant + stores txSig
       const confirmRes = await fetch(`/api/rooms/${roomId}/join/confirm`, {
@@ -217,8 +218,7 @@ export default function RoomDetailPage() {
 
       const provider = (window as any).phantom?.solana || (window as any).solana;
       if (!provider) { setError("Phantom not detected"); return; }
-      const { signature: txSigBytes } = await provider.signAndSendTransaction(tx);
-      const txSig = bs58.encode(txSigBytes);
+      const { signature: txSig } = await provider.signAndSendTransaction(tx);
 
       // Phase 3: Confirm on server
       const confirmRes = await fetch(`/api/rooms/${roomId}/claim`, {

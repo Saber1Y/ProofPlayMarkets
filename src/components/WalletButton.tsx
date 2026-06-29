@@ -34,7 +34,7 @@ export function WalletButton() {
   if (authenticated && solanaAddr) {
     const short = `${solanaAddr.slice(0, 4)}...${solanaAddr.slice(-4)}`;
 
-    console.log("WalletButton: authenticated, solanaAddr:", solanaAddr);
+    // console.log("WalletButton: authenticated, solanaAddr:", solanaAddr);
 
     return (
       <div className="relative" ref={ref}>

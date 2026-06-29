@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { useWallets } from "@privy-io/react-auth/solana";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import Link from "next/link";
@@ -64,7 +63,6 @@ export default function RoomDetailPage() {
   const params = useParams();
   const roomId = params.roomId as string;
   const { ready, user, login } = usePrivy();
-  const { wallets } = useWallets();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
@@ -134,18 +132,13 @@ export default function RoomDetailPage() {
       const { tx: txBase64 } = data;
 
       // Step 2: Sign and send with wallet (triggers native wallet prompt)
-      const solWallet = wallets.find((w) => w.address === wallet);
-      if (!solWallet) { setError("Solana wallet not found"); return; }
-
-      console.log("[join] wallet found:", solWallet.address.slice(0, 8), "type:", solWallet.walletClientType);
       const tx = Transaction.from(Buffer.from(txBase64, "base64"));
       tx.feePayer = new PublicKey(wallet);
 
-      console.log("[join] siging tx, programIDs:", tx.instructions.map(i => i.programId.toBase58()));
-      const { signature: txSigBytes } = await solWallet.signAndSendTransaction({
-        transaction: tx.serialize({ verifySignatures: false }),
-        chain: "solana:devnet",
-      });
+      console.log("[join] signing tx, programIDs:", tx.instructions.map(i => i.programId.toBase58()));
+      const provider = (window as any).phantom?.solana || (window as any).solana;
+      if (!provider) { setError("Phantom not detected — please install Phantom wallet"); return; }
+      const { signature: txSigBytes } = await provider.signAndSendTransaction(tx);
       console.log("[join] tx signed:", bs58.encode(txSigBytes).slice(0, 20));
       const txSig = bs58.encode(txSigBytes);
 
@@ -219,16 +212,12 @@ export default function RoomDetailPage() {
       if (data.error) { setError(data.error); return; }
 
       // Phase 2: Sign and send with wallet
-      const solWallet = wallets.find((w) => w.address === wallet);
-      if (!solWallet) { setError("Solana wallet not found"); return; }
-
       const tx = Transaction.from(Buffer.from(data.tx, "base64"));
       tx.feePayer = new PublicKey(wallet);
 
-      const { signature: txSigBytes } = await solWallet.signAndSendTransaction({
-        transaction: tx.serialize({ verifySignatures: false }),
-        chain: "solana:devnet",
-      });
+      const provider = (window as any).phantom?.solana || (window as any).solana;
+      if (!provider) { setError("Phantom not detected"); return; }
+      const { signature: txSigBytes } = await provider.signAndSendTransaction(tx);
       const txSig = bs58.encode(txSigBytes);
 
       // Phase 3: Confirm on server

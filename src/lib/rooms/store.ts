@@ -160,6 +160,28 @@ export function confirmPendingJoin(
   });
 }
 
+export function addConfirmedParticipant(
+  roomId: string,
+  participant: { wallet: string; side: Side; amount: number; joinTx: string }
+): { room: Room; duplicate: boolean } | null {
+  return mutate(() => {
+    const room = rooms.get(roomId);
+    if (!room || room.status !== "OPEN") return null;
+    const duplicate = room.participants.some(
+      (p) => p.wallet.toLowerCase() === participant.wallet.toLowerCase()
+    );
+    if (duplicate) return { room, duplicate: true };
+    const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    room.participants.push({ id, ...participant, claimed: false });
+    addActivityLog(room, {
+      type: "USER_JOINED",
+      wallet: participant.wallet,
+      message: `${participant.wallet.slice(0, 6)}... joined ${participant.side}`,
+    });
+    return { room, duplicate: false };
+  });
+}
+
 export function lockRoom(roomId: string, txSig?: string): Room | null {
   return mutate(() => {
     const room = rooms.get(roomId);

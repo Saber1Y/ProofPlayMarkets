@@ -137,13 +137,16 @@ export default function RoomDetailPage() {
       const solWallet = wallets.find((w) => w.address === wallet);
       if (!solWallet) { setError("Solana wallet not found"); return; }
 
+      console.log("[join] wallet found:", solWallet.address.slice(0, 8), "type:", solWallet.walletClientType);
       const tx = Transaction.from(Buffer.from(txBase64, "base64"));
       tx.feePayer = new PublicKey(wallet);
 
+      console.log("[join] siging tx, programIDs:", tx.instructions.map(i => i.programId.toBase58()));
       const { signature: txSigBytes } = await solWallet.signAndSendTransaction({
         transaction: tx.serialize({ verifySignatures: false }),
         chain: "solana:devnet",
       });
+      console.log("[join] tx signed:", bs58.encode(txSigBytes).slice(0, 20));
       const txSig = bs58.encode(txSigBytes);
 
       // Step 3: Confirm on server — creates participant + stores txSig
@@ -157,7 +160,8 @@ export default function RoomDetailPage() {
 
       setRoom(confirmData);
     } catch (e: any) {
-      setError(e?.message ?? "Failed to join");
+      console.error("[join] error:", e);
+      setError(e?.message ?? "Failed to join — check console (F12) for details");
     } finally {
       setJoining(false);
     }
@@ -238,6 +242,7 @@ export default function RoomDetailPage() {
 
       setRoom(confirmData);
     } catch (e: any) {
+      console.error("[claim] error:", e);
       setError(e?.message ?? "Failed to claim");
     } finally {
       setClaiming(false);

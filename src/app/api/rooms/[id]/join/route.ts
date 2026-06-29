@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
-import { getRoom, addParticipant } from "@/lib/rooms/store";
+import { getRoom } from "@/lib/rooms/store";
 import { getServerSDK } from "@/lib/solana/server";
 import { getFixtureById } from "@/lib/txline/client";
 import { ensureTxLINEInit } from "@/lib/txline/server-init";
@@ -55,20 +55,8 @@ export async function POST(
       totalStake,
     );
 
-    // Create pending participant record
-    const participantId = `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const participant = { id: participantId, wallet, side, amount };
-    const result = addParticipant(id, participant);
-    if (!result) {
-      return NextResponse.json({ error: "Room is no longer open" }, { status: 400 });
-    }
-    if (result.duplicate) {
-      return NextResponse.json({ error: "You have already joined this room" }, { status: 400 });
-    }
-
     return NextResponse.json({
       tx: Buffer.from(tx.serialize({ verifySignatures: false })).toString("base64"),
-      participantId,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Invalid request";

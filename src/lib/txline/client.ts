@@ -81,7 +81,7 @@ export function parseLatestScore(raw: TxLINERawEvent[]): TxLINEScoreSnapshot | n
 
   const sorted = [...raw].sort((a, b) => b.Seq - a.Seq);
 
-  const finishedEvent = sorted.find((e) => e.StatusId === 5);
+  const finishedEvent = sorted.find((e) => e.StatusId === 5 || e.StatusId === 7 || e.StatusId === 9);
   const status = finishedEvent
     ? "finished"
     : snapshotStatus(sorted[0].StatusId, sorted[0].GameState);
@@ -122,10 +122,8 @@ export function snapshotStatus(
   statusId?: number,
   gameState?: string
 ): string {
-  if (statusId === 5) return "finished";
-  if (statusId === 4) return "in_progress";
-  if (statusId === 3) return "in_progress";
-  if (statusId === 2) return "in_progress";
+  if (statusId === 5 || statusId === 7 || statusId === 9) return "finished";
+  if (statusId === 4 || statusId === 3 || statusId === 2) return "in_progress";
   if (statusId === 1) return "scheduled";
   if (gameState === "finished" || gameState === "closed") return "finished";
   if (gameState === "started" || gameState === "in_progress") return "in_progress";

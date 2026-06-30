@@ -19,11 +19,12 @@ export async function POST(
   }
 
   // Only the creator can settle
-  const body = await req.json().catch(() => ({}));
-  const wallet = (body as { wallet?: string }).wallet;
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const wallet = body.wallet as string | undefined;
   if (!wallet || wallet.toLowerCase() !== room.createdBy.toLowerCase()) {
     return NextResponse.json({ error: "Only the room creator can settle" }, { status: 403 });
   }
+  const winnerOverride = body.winnerOverride as Side | undefined;
 
   try {
     ensureTxLINEInit();
@@ -56,6 +57,7 @@ export async function POST(
     } else {
       if (homeScore > awayScore) winnerSide = "HOME";
       else if (awayScore > homeScore) winnerSide = "AWAY";
+      else if (winnerOverride) winnerSide = winnerOverride;
       else winnerSide = "DRAW";
     }
 

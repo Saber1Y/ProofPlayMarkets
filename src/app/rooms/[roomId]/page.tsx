@@ -408,7 +408,7 @@ export default function RoomDetailPage() {
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {(yesPool * (room.entryFee || 0) / 1e9).toFixed(3)}
+                    {(yesPool * (room.entryFee || 0) / 1e9).toFixed(6)}
                   </div>
                   <div className="text-[10px] text-zinc-600">
                     SOL · {room.participants.filter((p) => p.side === "OVER" || p.side === "HOME").length} participant{room.participants.filter((p) => p.side === "OVER" || p.side === "HOME").length !== 1 ? "s" : ""}
@@ -422,7 +422,7 @@ export default function RoomDetailPage() {
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-white">
-                    {(noPool * (room.entryFee || 0) / 1e9).toFixed(3)}
+                    {(noPool * (room.entryFee || 0) / 1e9).toFixed(6)}
                   </div>
                   <div className="text-[10px] text-zinc-600">
                     SOL · {room.participants.filter((p) => p.side === "UNDER" || p.side === "AWAY").length} participant{room.participants.filter((p) => p.side === "UNDER" || p.side === "AWAY").length !== 1 ? "s" : ""}
@@ -470,7 +470,7 @@ export default function RoomDetailPage() {
                           {p.side}
                         </span>
                         <span className="text-xs text-zinc-600">
-                          {(p.amount * (room.entryFee || 0) / 1e9).toFixed(3)}
+                          {(p.amount * (room.entryFee || 0) / 1e9).toFixed(6)}
                         </span>
                       </div>
                     </div>
